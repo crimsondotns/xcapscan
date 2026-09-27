@@ -547,7 +547,8 @@ export async function renderSlip(rec: SlipRecord, L: Labels, action: SlipAction 
     if (lead && show.headline) {
       const isIn = lead.dir === 'in';
       text(lead.approve ? L.approved : isIn ? L.received : L.sent, W / 2, y + 4, 12, 400, MUTED, 'center');
-      y += 14;
+      // ป้าย → ตัวเลขใหญ่ ชิดกัน (~6px) ให้อ่านเป็นก้อนเดียว
+      y += 6;
       const amount = `${lead.approve ? '' : isIn ? '+' : '−'}${formatAmountFull(lead.amount)}`;
       // ตัวเลขอย่างเดียว ไม่มีสัญลักษณ์ (บล็อกสินทรัพย์ข้างล่างบอกอยู่แล้ว) — ยาวเกินจะถูกย่อใน text() ไม่ตัดบรรทัด
       text(amount, W / 2, y + 26, 26, 700, risky ? MUTED : isIn ? POSITIVE : INK, 'center');
