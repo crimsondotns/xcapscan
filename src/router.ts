@@ -1,5 +1,5 @@
 /**
- * เส้นทางแบบ path จริง (ไม่มี #): <base>/ = แดชบอร์ด, <base>/<id> = กระเป๋า, <base>/v/<code>[.<data>] = ตรวจสลิป
+ * เส้นทางแบบ path จริง (ไม่มี #): <base>/ = แดชบอร์ด, <base>/wallet/<id> = กระเป๋า, <base>/verify/<code>[.<data>] = ตรวจสลิป (รายการเต็มดู parseRoute ใน App.tsx)
  * ใช้ History API; static host ที่ไม่รู้จัก path จะเสิร์ฟ public/404.html ซึ่งเด้งกลับมาที่ <base>/?p=<path> แล้วตรงนี้คืน path ให้
  */
 import { useEffect, useState } from 'react';
@@ -32,6 +32,21 @@ export function useRoute(): string {
     };
   }, []);
   return route;
+}
+
+/** ไดอะล็อกที่เปิดอยู่ (?open=<ชื่อ>) — ไม่ใช่หน้า จึงอยู่ใน query ไม่แตะ path: หน้าข้างหลังยังเป็นหน้าเดิม */
+export function useOpenParam(): string | null {
+  const [v, setV] = useState(() => new URLSearchParams(location.search).get('open'));
+  useEffect(() => {
+    const on = () => setV(new URLSearchParams(location.search).get('open'));
+    window.addEventListener('popstate', on);
+    window.addEventListener('xcap:navigate', on);
+    return () => {
+      window.removeEventListener('popstate', on);
+      window.removeEventListener('xcap:navigate', on);
+    };
+  }, []);
+  return v;
 }
 
 export function navigate(path: string, replace = false): void {

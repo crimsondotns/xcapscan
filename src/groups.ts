@@ -1,16 +1,13 @@
 /**
  * กลุ่มกระเป๋าในแถบซ้าย (และเมนูบนหัวหน้าย่อย) — ตรรกะล้วน เทสต์ได้
- * id ของกลุ่ม: คงที่ ('all' | 'loaded' | 'unloaded' | 'active') หรือ 'tag:<แท็ก>' / 'chain:<ตระกูล>'
+ * id ของกลุ่ม: คงที่ 'all' หรือ 'tag:<แท็ก>' / 'chain:<ตระกูล>'
  */
 import type { Family, Wallet } from './store';
 
 export type GroupId = string;
 
-export const FIXED_GROUPS = ['all', 'loaded', 'unloaded', 'active'] as const;
+export const FIXED_GROUPS = ['all'] as const;
 export type FixedGroup = (typeof FIXED_GROUPS)[number];
-
-/** จำนวนวันที่ถือว่า "เคลื่อนไหวล่าสุด" */
-export const ACTIVE_DAYS = 7;
 
 /** ข้อมูลที่กลุ่มต้องรู้เกี่ยวกับกระเป๋าหนึ่งใบ (มาจาก feed) */
 export interface WalletInfo {
@@ -22,11 +19,8 @@ export interface WalletInfo {
 export const tagGroup = (tag: string): GroupId => `tag:${tag}`;
 export const chainGroup = (family: Family): GroupId => `chain:${family}`;
 
-export function matchesGroup(group: GroupId, w: Wallet, info: WalletInfo, now = Date.now()): boolean {
+export function matchesGroup(group: GroupId, w: Wallet, _info?: WalletInfo, _now?: number): boolean {
   if (group === 'all') return true;
-  if (group === 'loaded') return info.loaded;
-  if (group === 'unloaded') return !info.loaded;
-  if (group === 'active') return info.last !== null && now / 1000 - info.last <= ACTIVE_DAYS * 86400;
   if (group.startsWith('tag:')) return (w.tags ?? []).includes(group.slice(4));
   if (group.startsWith('chain:')) return w.family === group.slice(6);
   return true;

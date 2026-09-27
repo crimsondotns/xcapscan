@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { daily, lastTime, netUsd, rowsOfToken, signClassOf, tokenSummary, totals, withinDays } from '../src/flow.ts';
-import { matchesGroup, groupExists, tagsOf, familiesOf, ACTIVE_DAYS } from '../src/groups.ts';
+import { matchesGroup, groupExists, tagsOf, familiesOf } from '../src/groups.ts';
 import type { Move, TxRow } from '../src/feed.ts';
 import { cleanTags, type Wallet } from '../src/store.ts';
 
@@ -98,15 +98,10 @@ test('คลาสสีตามทิศทางเงิน', () => {
 
 const wallet = (over: Partial<Wallet> = {}): Wallet => ({ id: '0xa', label: 'A', address: '0xa', family: 'erc20', enabled: true, ...over });
 
-test('กลุ่ม: โหลดแล้ว/ยังไม่โหลด/เคลื่อนไหว/แท็ก/ตระกูลเชน', () => {
+test('กลุ่ม: ทั้งหมด/แท็ก/ตระกูลเชน', () => {
   const w = wallet({ tags: ['เก็บยาว', 'ลูกค้า'] });
   const loadedRecently = { loaded: true, last: day(1) };
-  const loadedOld = { loaded: true, last: day(ACTIVE_DAYS + 3) };
   assert.equal(matchesGroup('all', w, { loaded: false, last: null }, NOW), true);
-  assert.equal(matchesGroup('loaded', w, loadedRecently, NOW), true);
-  assert.equal(matchesGroup('unloaded', w, loadedRecently, NOW), false);
-  assert.equal(matchesGroup('active', w, loadedRecently, NOW), true);
-  assert.equal(matchesGroup('active', w, loadedOld, NOW), false);
   assert.equal(matchesGroup('tag:เก็บยาว', w, loadedRecently, NOW), true);
   assert.equal(matchesGroup('tag:ลูกค้า', w, loadedRecently, NOW), true, 'กระเป๋าใบเดียวอยู่ได้หลายกลุ่มแท็ก');
   assert.equal(matchesGroup('tag:อื่น', w, loadedRecently, NOW), false);
@@ -193,3 +188,4 @@ test('markRisk ไม่ถอดธงที่แหล่งข้อมู�
   const fromSource = row({ type: 'send', flagged: true, moves: [move({ dir: 'out', usd: 50 })] });
   assert.equal(markRisk([fromSource])[0]?.flagged, true);
 });
+

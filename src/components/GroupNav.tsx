@@ -2,7 +2,7 @@
  * กลุ่มกระเป๋า — แถบซ้ายบนหน้าแดชบอร์ด และเมนูบนหัวเว็บเมื่ออยู่หน้าย่อย (แถบซ้ายหายไป)
  * ทั้งสองแบบใช้รายการชุดเดียวกัน จึงไม่มีทางเลื่อนไม่ตรงกัน
  */
-import { chainGroup, matchesGroup, tagGroup, tagsOf, familiesOf, ACTIVE_DAYS, type GroupId, type WalletInfo } from '../groups';
+import { chainGroup, matchesGroup, tagGroup, tagsOf, familiesOf, type GroupId, type WalletInfo } from '../groups';
 import { chainOf, type ChainMap } from '../chains';
 import { useI18n } from '../i18n';
 import type { Family, Wallet } from '../store';
@@ -37,12 +37,7 @@ function familyLogo(chains: ChainMap, family: Family, name: string): { src: stri
 function useSections({ wallets, infoOf, chains }: Omit<GroupNavProps, 'group' | 'onChange'>): { fixed: Item[]; tags: Item[]; families: Item[] } {
   const { t } = useI18n();
   const count = (g: GroupId) => wallets.filter((w) => matchesGroup(g, w, infoOf(w))).length;
-  const fixed: Item[] = [
-    { id: 'all', label: t('group.all'), count: wallets.length },
-    { id: 'loaded', label: t('group.loaded'), count: count('loaded') },
-    { id: 'unloaded', label: t('group.unloaded'), count: count('unloaded') },
-    { id: 'active', label: t('group.active', { n: ACTIVE_DAYS }), count: count('active') },
-  ];
+  const fixed: Item[] = [{ id: 'all', label: t('group.all'), count: wallets.length }];
   const tags: Item[] = tagsOf(wallets).map((tag) => ({ id: tagGroup(tag), label: tag, count: count(tagGroup(tag)) }));
   const families: Item[] = familiesOf(wallets).map((f) => {
     const label = t(`family.${f}`);
@@ -56,12 +51,18 @@ export function useGroupLabel(wallets: Wallet[], group: GroupId): string {
   const { t } = useI18n();
   if (group.startsWith('tag:')) return group.slice(4);
   if (group.startsWith('chain:')) return t(group.slice(6) === 'sol' ? 'family.sol' : 'family.erc20');
-  if (group === 'loaded' || group === 'unloaded' || group === 'all') return t(`group.${group}`);
-  if (group === 'active') return t('group.active', { n: ACTIVE_DAYS });
   return t('group.all');
 }
 
-const ItemLabel = ({ item }: { item: Item }) => (item.logo ? <span className="opt"><Logo src={item.logo.src} name={item.logo.name} size={18} />{item.label}</span> : <>{item.label}</>);
+const ItemLabel = ({ item }: { item: Item }) =>
+  item.logo ? (
+    <span className="opt">
+      <Logo src={item.logo.src} name={item.logo.name} size={18} />
+      {item.label}
+    </span>
+  ) : (
+    <>{item.label}</>
+  );
 
 /** แถบซ้ายของหน้าแดชบอร์ด */
 export function GroupRail(props: GroupNavProps) {

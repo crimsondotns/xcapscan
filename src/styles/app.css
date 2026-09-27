@@ -1552,8 +1552,6 @@ dialog.dlg::backdrop {
 .preview {
   max-height: 240px;
   overflow: auto;
-  border: 1px solid var(--color-line-subtle);
-  border-radius: var(--radius-md);
 }
 .preview table {
   width: 100%;
@@ -1816,6 +1814,9 @@ dialog.dlg::backdrop {
 
 @media (max-width: 639px) {
   .top-status {
+    display: none;
+  }
+  .tx .col-last {
     display: none;
   }
   .empty {

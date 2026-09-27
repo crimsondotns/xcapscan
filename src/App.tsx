@@ -16,7 +16,7 @@ import { LangMenu } from './components/LangMenu';
 import { ThemeToggle } from './components/ThemeToggle';
 import { useModalLayer } from './modal';
 import { setProxy } from './proxy';
-import { navigate, useRoute } from './router';
+import { navigate, useOpenParam, useRoute } from './router';
 import { lastTime } from './flow';
 import { groupExists, matchesGroup, type GroupId } from './groups';
 import { GroupMenubar } from './components/GroupNav';
@@ -26,29 +26,49 @@ import { WalletPage } from './pages/WalletPage';
 import { AssetPage } from './pages/AssetPage';
 import type { Range } from './components/FlowChart';
 
-/** เส้นทาง: '' = แดชบอร์ด · '<id>' = กระเป๋า · 't/<sym>' = โทเคน (ทุกกระเป๋า) · '<id>/t/<sym>' = โทเคนในกระเป๋านั้น · 'v/<code>' = ตรวจสลิป */
-function parseRoute(route: string): { wallet: string | null; token: string | null; share: string | null } {
+/** เส้นทาง (ชื่อเต็ม): '' = แดชบอร์ด · 'group/<กลุ่ม>' · 'settings' / 'import' = ไดอะล็อกบนแดชบอร์ด
+ *  · 'wallet/<id>' · 'token/<sym>' (ทุกกระเป๋า) · 'wallet/<id>/token/<sym>' · 'verify/<code>' = ตรวจสลิป
+ *  ไดอะล็อก Settings / Import = '?open=settings' / '?open=import' ต่อท้ายหน้าไหนก็ได้ (หน้าข้างหลังไม่เปลี่ยน)
+ *  ลิงก์แบบย่อเดิม (g/ t/ h/ v/ และ '<id>' เปล่า) ยังเปิดได้ — ลิงก์สลิปที่แชร์ไปแล้วต้องไม่เสีย */
+type Parsed = { wallet: string | null; token: string | null; share: string | null; group: GroupId | null; dialog: 'settings' | 'import' | null };
+const TOKEN_SEG = new Set(['token', 't']);
+function parseRoute(route: string): Parsed {
   const seg = route.split('/').filter(Boolean).map(decodeURIComponent);
-  if (seg[0] === 'v') return { wallet: null, token: null, share: seg.slice(1).join('/') };
-  if (seg[0] === 't') return { wallet: null, token: seg[1] ?? null, share: null };
-  if (!seg[0]) return { wallet: null, token: null, share: null };
-  return { wallet: seg[0], token: seg[1] === 't' ? (seg[2] ?? null) : null, share: null };
+  const none: Parsed = { wallet: null, token: null, share: null, group: null, dialog: null };
+  const head = seg[0];
+  if (head === 'verify' || head === 'v') return { ...none, share: seg.slice(1).join('/') };
+  if (head && TOKEN_SEG.has(head)) return { ...none, token: seg[1] ?? null };
+  if (head === 'group' || head === 'g') return { ...none, group: seg[1] ?? null };
+  if (head === 'settings' || head === 'import') return { ...none, dialog: head };
+  if (!head) return none;
+  const rest = head === 'wallet' ? seg.slice(1) : seg;
+  if (!rest[0]) return none;
+  return { ...none, wallet: rest[0], token: rest[1] && TOKEN_SEG.has(rest[1]) ? (rest[2] ?? null) : null };
 }
 
-const walletPath = (id: string) => encodeURIComponent(id);
-const tokenPath = (symbol: string, walletId: string | null) => (walletId ? `${encodeURIComponent(walletId)}/t/${encodeURIComponent(symbol)}` : `t/${encodeURIComponent(symbol)}`);
+const groupPath = (g: GroupId) => (g === 'all' ? '' : `group/${encodeURIComponent(g)}`);
+const walletPath = (id: string) => `wallet/${encodeURIComponent(id)}`;
+const tokenPath = (symbol: string, walletId: string | null) => (walletId ? `${walletPath(walletId)}/token/${encodeURIComponent(symbol)}` : `token/${encodeURIComponent(symbol)}`);
 
 export function App() {
   const { t } = useI18n();
   const { wallets, settings } = useStore();
   const { feeds, loadMany, loadStaggered, cancelStaggered, progress, ensure, reset, forget, fillMeta } = useFeed(settings);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [importing, setImporting] = useState(false);
   const route = useRoute();
   const parsed = useMemo(() => parseRoute(route), [route]);
+  /* ไดอะล็อก Settings/Import มี path ของตัวเอง — ปิดแล้วกลับไปหน้าที่เปิดมา */
+  const open = useOpenParam();
+  const settingsOpen = open === 'settings';
+  const importing = open === 'import';
+  const openDialog = useCallback((d: 'settings' | 'import') => navigate(`${route}?open=${d}`), [route]);
+  const closeDialog = useCallback(() => navigate(route), [route]);
+  /* ลิงก์เก่า /settings, /import → แดชบอร์ด + ?open= */
+  useEffect(() => {
+    if (parsed.dialog) navigate(`?open=${parsed.dialog}`, true);
+  }, [parsed.dialog]);
   const pageWallet = parsed.wallet;
   const pageToken = parsed.token;
-  /* /v/<code>[.<data>] = ลิงก์ตรวจสลิป → เปิดไดอะล็อกตรวจทับแดชบอร์ด */
+  /* /verify/<code>[.<data>] = ลิงก์ตรวจสลิป → เปิดไดอะล็อกตรวจทับแดชบอร์ด */
   const share = useMemo(() => (parsed.share === null ? null : parseShare(parsed.share)), [parsed.share]);
   const [verifyOpen, setVerifyOpen] = useState(false);
   useEffect(() => {
@@ -56,8 +76,16 @@ export function App() {
   }, [share]);
   const page: 'dashboard' | 'wallet' | 'asset' = pageToken ? 'asset' : pageWallet ? 'wallet' : 'dashboard';
   const [selected, setSelected] = useState<TxRow | null>(null);
-  /* กลุ่มกระเป๋าที่เลือกอยู่ (แถบซ้าย/เมนูบนหัว) และช่วงเวลาของกราฟ — เป็นมุมมอง ไม่ใช่ข้อมูล จึงไม่อยู่ใน URL */
-  const [group, setGroup] = useState<GroupId>('all');
+  /* กลุ่มกระเป๋าที่เลือกอยู่ — อยู่ใน URL ของแดชบอร์ด ('group/<กลุ่ม>'); หน้าย่อยจำกลุ่มล่าสุดไว้ */
+  const [group, setGroupState] = useState<GroupId>(parsed.group ?? 'all');
+  useEffect(() => {
+    if (page === 'dashboard') setGroupState(parsed.group ?? 'all');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsed]);
+  const setGroup = useCallback((g: GroupId) => {
+    setGroupState(g);
+    navigate(groupPath(g));
+  }, []);
   const [range, setRange] = useState<Range>(30);
   /* กระเป๋าที่กำลังดู (null = ทุกกระเป๋า) */
   const [activeWallet, setActiveWallet] = useState<string | null>(null);
@@ -86,25 +114,25 @@ export function App() {
       const w = id ? wallets.find((x) => x.id === id) : undefined;
       if (w && hasEndpoint && endpointsFor(w, settings).length) void ensure(w);
     },
-    [wallets, hasEndpoint, settings, ensure]
+    [wallets, hasEndpoint, settings, ensure],
   );
   const openWallet = useCallback(
     (id: string | null) => {
       selectWallet(id);
       navigate(id ? walletPath(id) : '');
     },
-    [selectWallet]
+    [selectWallet],
   );
   const openToken = useCallback(
     (symbol: string, walletId: string | null) => {
       if (walletId) selectWallet(walletId);
       navigate(tokenPath(symbol, walletId));
     },
-    [selectWallet]
+    [selectWallet],
   );
   const goDashboard = useCallback(() => {
-    navigate('');
-  }, []);
+    navigate(groupPath(group));
+  }, [group]);
   /* เปิดด้วย URL ที่ชี้กระเป๋า → เลือกกระเป๋านั้นให้ (ถ้ายังมีอยู่) */
   useEffect(() => {
     if (!pageWallet) return;
@@ -114,13 +142,12 @@ export function App() {
   }, [pageWallet, wallets]);
   /* ลบแท็ก/กระเป๋าสุดท้ายของกลุ่มที่เลือกอยู่ → กลุ่มนั้นหายไป กลับไปที่ "ทุกกระเป๋า" */
   useEffect(() => {
-    if (!groupExists(group, wallets)) setGroup('all');
-  }, [group, wallets]);
+    if (groupExists(group, wallets)) return;
+    setGroupState('all');
+    if (parsed.group) navigate('', true);
+  }, [group, wallets, parsed.group]);
 
-  const infoOf = useCallback(
-    (w: { id: string }) => ({ loaded: feeds[w.id]?.loaded === true, last: lastTime(feeds[w.id]?.rows ?? []) }),
-    [feeds]
-  );
+  const infoOf = useCallback((w: { id: string }) => ({ loaded: feeds[w.id]?.loaded === true, last: lastTime(feeds[w.id]?.rows ?? []) }), [feeds]);
   /* กระเป๋าของกลุ่มที่เลือก (ทั้งที่ซ่อนอยู่ด้วย — ตารางยังต้องเห็นเพื่อเปิดกลับ) */
   const groupWallets = useMemo(() => wallets.filter((w) => matchesGroup(group, w, infoOf(w))), [wallets, group, infoOf]);
   const rows = useMemo(() => active.flatMap((w) => feeds[w.id]?.rows ?? []).sort((a, b) => b.time - a.time), [active, feeds]);
@@ -180,9 +207,9 @@ export function App() {
           <XCapMark />
           {t('app.name')} <span className="brand-sub">{t('app.sub')}</span>
         </button>
-        {page !== 'dashboard' && <GroupMenubar wallets={wallets} infoOf={infoOf} group={group} onChange={(g) => { setGroup(g); goDashboard(); }} chains={chains} />}
+        {page !== 'dashboard' && <GroupMenubar wallets={wallets} infoOf={infoOf} group={group} onChange={setGroup} chains={chains} />}
         <span className="top-spacer" />
-        <button type="button" className="btn btn-primary" onClick={() => setImporting(true)}>
+        <button type="button" className="btn btn-primary" onClick={() => openDialog('import')}>
           <Icon name="upload" />
           {t('wallets.import')}
         </button>
@@ -192,7 +219,7 @@ export function App() {
         <button type="button" className="btn btn-icon" data-fn="verify" onClick={() => setVerifyOpen(true)} aria-label={t('slip.verify')} title={t('slip.verify')}>
           <Icon name="shield" />
         </button>
-        <button type="button" className="btn btn-icon" onClick={() => setSettingsOpen(true)} aria-label={t('nav.settings')} title={t('nav.settings')}>
+        <button type="button" className="btn btn-icon" onClick={() => openDialog('settings')} aria-label={t('nav.settings')} title={t('nav.settings')}>
           <Icon name="settings" />
         </button>
         <ThemeToggle />
@@ -205,7 +232,7 @@ export function App() {
           {!hasEndpoint ? (
             <div className="empty">
               <h2>{t('tx.emptyEndpoint')}</h2>
-              <button type="button" className="btn btn-primary" onClick={() => setSettingsOpen(true)}>
+              <button type="button" className="btn btn-primary" onClick={() => openDialog('settings')}>
                 {t('nav.settings')}
               </button>
             </div>
@@ -283,8 +310,8 @@ export function App() {
         </main>
       </div>
 
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <ImportDialog open={importing} onClose={() => setImporting(false)} />
+      <SettingsDialog open={settingsOpen} onClose={closeDialog} />
+      <ImportDialog open={importing} onClose={closeDialog} />
       <VerifyDialog
         open={verifyOpen}
         initial={share}
@@ -300,7 +327,7 @@ export function App() {
           {selected !== null && <button type="button" className="drawer-scrim" aria-label={t('dialog.close')} onClick={closeDetail} />}
           <DetailPanel row={selected} wallets={wallets} chains={chains} settings={settings} onClose={closeDetail} />
         </DrawerLayer>,
-        document.body
+        document.body,
       )}
     </>
   );

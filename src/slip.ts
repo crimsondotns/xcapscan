@@ -178,9 +178,9 @@ export function listSlips(): SlipRecord[] {
 const b64 = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64 = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
 
-/** ลิงก์พกข้อมูลไปเอง: /v/<code>.<base64url(json)> — เปิดในแอปนี้ที่ไหนก็ตรวจได้ */
+/** ลิงก์พกข้อมูลไปเอง: /verify/<code>.<base64url(json)> — เปิดในแอปนี้ที่ไหนก็ตรวจได้ */
 export function shareLink(rec: SlipRecord): string {
-  return absoluteUrl(`v/${rec.code}.${b64(JSON.stringify(rec.data))}`);
+  return absoluteUrl(`verify/${rec.code}.${b64(JSON.stringify(rec.data))}`);
 }
 
 export function parseShare(fragment: string): { code: string; data: SlipData | null } | null {
