@@ -5,19 +5,26 @@ import { tokenSummary, signClassOf } from '../flow';
 import { formatUsdExact } from '../format';
 import { useI18n } from '../i18n';
 import { useCopy } from '../copy';
-import { Logo } from './Logo';
+import { TokenLogo } from './Logo';
+import { chainOf, type ChainMap } from '../chains';
 import { Icon } from './Icon';
 import { useStickyHead } from '../useStickyHead';
 import { SkeletonRows } from './Skeleton';
 import { useStore } from '../store';
 
-export function TokenTable({ rows, onToken, loading = false }: { rows: TxRow[]; onToken: (symbol: string) => void; loading?: boolean }) {
+export function TokenTable({ rows, chains, onToken, loading = false }: { rows: TxRow[]; chains: ChainMap; onToken: (symbol: string) => void; loading?: boolean }) {
   const { t } = useI18n();
   const copy = useCopy();
   /* ซ่อน/แสดงโทเคนน่าสงสัย — ใช้ค่าเดียวกับแท็บธุรกรรม (settings.hideScam) */
   const { settings, setHideScam } = useStore();
   const hideScam = settings.hideScam;
   const all = useMemo(() => tokenSummary(rows), [rows]);
+  /* โลโก้เชน: chain list ก่อน แล้วค่อยโลโก้ที่แหล่งข้อมูลแนบมากับแถว — ไม่มีทั้งคู่ = ตัวอักษร */
+  const feedChainLogo = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of rows) if (r.chainLogo && !m.has(r.chain)) m.set(r.chain, r.chainLogo);
+    return m;
+  }, [rows]);
   const tokens = useMemo(() => (hideScam ? all.filter((k) => !k.flagged) : all), [all, hideScam]);
   const head = useStickyHead();
   if (!all.length && !loading) return <p className="hint">{t('tx.emptyLoaded')}</p>;
@@ -82,7 +89,7 @@ export function TokenTable({ rows, onToken, loading = false }: { rows: TxRow[]; 
                 >
                   <td>
                     <span className="who">
-                      <Logo src={k.logo} name={k.symbol} size={28} />
+                      <TokenLogo token={k.logo} tokenName={k.symbol} chain={chainOf(chains, k.chain)?.logo ?? feedChainLogo.get(k.chain) ?? null} chainName={chainOf(chains, k.chain)?.name ?? k.chain} size={28} />
                       <span className="act-text">
                         {k.tokenId ? (
                           <button

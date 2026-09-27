@@ -106,7 +106,7 @@ export function WalletPage({
             { value: 'history', label: t('tab.history'), count: rows.length },
           ]}
         />
-        {tab === 'tokens' ? <TokenTable rows={ranged} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} />}
+        {tab === 'tokens' ? <TokenTable rows={ranged} chains={chains} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} />}
       </section>
       <TagDialog open={tagsOpen} wallet={wallet} onClose={() => setTagsOpen(false)} />
     </>

@@ -99,7 +99,17 @@ export function slipData(row: TxRow, wallet: { address: string; label: string } 
     to: row.to,
     fromLabel: row.from ? (extra.labelOf?.(row.from) ?? null) : null,
     toLabel: row.to ? (extra.labelOf?.(row.to) ?? null) : null,
-    moves: row.moves.filter((m) => m.amount !== 0).map((m) => ({ dir: m.dir, amount: m.amount, symbol: m.symbol, usd: m.approve ? null : usdOfMove(m), logo: m.logo, ...(m.approve ? { approve: true as const } : {}), ...(m.tokenId === null ? { native: true as const } : {}) })),
+    moves: row.moves
+      .filter((m) => m.amount !== 0)
+      .map((m) => ({
+        dir: m.dir,
+        amount: m.amount,
+        symbol: m.symbol,
+        usd: m.approve ? null : usdOfMove(m),
+        logo: m.logo,
+        ...(m.approve ? { approve: true as const } : {}),
+        ...(m.tokenId === null ? { native: true as const } : {}),
+      })),
     fee: row.gasNative,
     feeSymbol: native,
     time: row.time,
@@ -118,7 +128,22 @@ export function slipData(row: TxRow, wallet: { address: string; label: string } 
 
 /** สตริงที่แฮช: JSON ของฟิลด์ตามลำดับที่กำหนด (ไม่ขึ้นกับลำดับ key ของอ็อบเจ็กต์) */
 function canonical(d: SlipData): string {
-  return JSON.stringify([d.v, d.hash, d.chain, d.type, d.status, d.wallet, d.from, d.to, d.moves.map((m) => [m.dir, m.amount, m.symbol, m.approve ? 1 : 0]), d.flagged ? 1 : 0, d.fee, d.feeSymbol, d.time, d.issued]);
+  return JSON.stringify([
+    d.v,
+    d.hash,
+    d.chain,
+    d.type,
+    d.status,
+    d.wallet,
+    d.from,
+    d.to,
+    d.moves.map((m) => [m.dir, m.amount, m.symbol, m.approve ? 1 : 0]),
+    d.flagged ? 1 : 0,
+    d.fee,
+    d.feeSymbol,
+    d.time,
+    d.issued,
+  ]);
 }
 
 export async function slipCode(d: SlipData): Promise<string> {
@@ -175,7 +200,11 @@ export function listSlips(): SlipRecord[] {
 
 /* ----------------------------- ลิงก์แชร์ ----------------------------- */
 
-const b64 = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64 = (s: string) =>
+  btoa(unescape(encodeURIComponent(s)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 const unb64 = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
 
 /** ลิงก์พกข้อมูลไปเอง: /verify/<code>.<base64url(json)> — เปิดในแอปนี้ที่ไหนก็ตรวจได้ */
@@ -221,6 +250,20 @@ export async function verifySlip(code: string, data: SlipData | null): Promise<{
 
 const FONT = "'Suisse Intl', -apple-system, BlinkMacSystemFont, sans-serif";
 const W = 320;
+/** ตัวอักษรเล็กสุดที่ยอมย่อลงไปเพื่อไม่ให้ล้นสลิป */
+const MIN_SIZE = 9;
+
+/** ขนาดตัวอักษรที่ทำให้ s กว้างไม่เกิน maxW (ย่อทีละ 1px, ไม่ต่ำกว่า MIN_SIZE) */
+export function fitSize(ctx: CanvasRenderingContext2D, s: string, size: number, weight: number, maxW: number): number {
+  let n = size;
+  ctx.font = `${weight} ${n}px ${FONT}`;
+  while (n > MIN_SIZE && ctx.measureText(s).width > maxW) {
+    n -= 1;
+    ctx.font = `${weight} ${n}px ${FONT}`;
+  }
+  return n;
+}
+
 const PAD = 22;
 const INK = '#000000';
 const MUTED = 'rgba(0,0,0,0.6)';
@@ -346,9 +389,13 @@ export async function renderSlip(rec: SlipRecord, L: Labels, action: SlipAction 
   const qr = document.createElement('canvas');
   await QRCode.toCanvas(qr, d.url ?? d.hash, { margin: 0, width: 96, color: { dark: INK, light: '#ffffff' } });
 
+  /** ความกว้างที่ข้อความมีได้ ณ จุดนั้น ตามการจัดแนว */
+  const room = (x: number, align: CanvasTextAlign): number => (align === 'center' ? W - PAD * 2 : align === 'right' || align === 'end' ? x - PAD : W - PAD - x);
   const draw = (ctx: CanvasRenderingContext2D, dry: boolean): number => {
     let y = PAD;
     const text = (s: string, x: number, yy: number, size: number, weight = 400, color = INK, align: CanvasTextAlign = 'left') => {
+      // กันล้นขอบสลิป: กว้างเกินที่ว่างตามการจัดแนว → ลดขนาดตัวอักษรทีละ 1px จนพอดี (ไม่ต่ำกว่า MIN_SIZE)
+      size = fitSize(ctx, s, size, weight, room(x, align));
       ctx.font = `${weight} ${size}px ${FONT}`;
       ctx.fillStyle = color;
       ctx.textAlign = align;
@@ -505,10 +552,9 @@ export async function renderSlip(rec: SlipRecord, L: Labels, action: SlipAction 
       const isIn = lead.dir === 'in';
       text(lead.approve ? L.approved : isIn ? L.received : L.sent, W / 2, y + 4, 12, 400, MUTED, 'center');
       y += 14;
-      const big = `${lead.approve ? '' : isIn ? '+' : '−'}${formatAmountFull(lead.amount)} ${lead.symbol}`;
-      ctx.font = `700 26px ${FONT}`;
-      const size = ctx.measureText(big).width > W - PAD * 2 ? 20 : 26;
-      text(big, W / 2, y + 26, size, 700, risky ? MUTED : isIn ? POSITIVE : INK, 'center');
+      const amount = `${lead.approve ? '' : isIn ? '+' : '−'}${formatAmountFull(lead.amount)}`;
+      // ตัวเลขอย่างเดียว ไม่มีสัญลักษณ์ (บล็อกสินทรัพย์ข้างล่างบอกอยู่แล้ว) — ยาวเกินจะถูกย่อใน text() ไม่ตัดบรรทัด
+      text(amount, W / 2, y + 26, 26, 700, risky ? MUTED : isIn ? POSITIVE : INK, 'center');
       y += 36;
       if (show.usd && lead.usd !== null && lead.usd !== undefined) {
         text(`≈ ${formatUsdExact(lead.usd)}`, W / 2, y + 4, 12, 400, MUTED, 'center');

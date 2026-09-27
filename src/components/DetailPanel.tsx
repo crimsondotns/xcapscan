@@ -1,5 +1,5 @@
 /** แผงขวา — รายละเอียดธุรกรรมโครงเดียวกับหน้าอ้างอิง: หัว (ชนิด/เวลา/สถานะ) → สินทรัพย์ → แถวข้อมูล */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { useI18n } from '../i18n';
 import type { Move, TxRow } from '../feed';
 import type { Settings, Wallet } from '../store';
@@ -105,7 +105,13 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
       </span>
       <span className="ev-asset-info">
         {m.tokenId ? (
-          <button type="button" className="ev-symbol copy-name" title={t('token.copyAddress', { sym: m.symbol })} aria-label={t('token.copyAddress', { sym: m.symbol })} onClick={() => void copyValue(m.tokenId ?? '')}>
+          <button
+            type="button"
+            className="ev-symbol copy-name"
+            title={t('token.copyAddress', { sym: m.symbol })}
+            aria-label={t('token.copyAddress', { sym: m.symbol })}
+            onClick={() => void copyValue(m.tokenId ?? '')}
+          >
             {m.symbol}
           </button>
         ) : (
@@ -113,9 +119,7 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
             {m.symbol}
           </span>
         )}
-        <span className="ev-net">
-          {t('detail.on', { chain: chainName })}
-        </span>
+        <span className="ev-net">{t('detail.on', { chain: chainName })}</span>
       </span>
       <span className="ev-amount-wrap">
         <button
@@ -274,38 +278,108 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
         </div>
       </div>
 
+      {/* ปุ่มเดียวเต็มกว้าง → เมนูลอยขึ้นด้านบน: ดูสลิป / ดูบน explorer */}
       <div className="drawer-foot">
-        <button
-          type="button"
-          className="btn"
-          onClick={() =>
-            setSlip(
-              slipData(row, wallet, chainName, native, txUrl, {
-                chainLogo,
-                usdOfMove: moveUsd,
-                swapCost,
-                feeUsd: gasUsd,
-                protocol: row.counterpartyName,
-                protocolKind: kind ? t(`kind.${kind}`) : null,
-                reasons: riskReasons(row, wallets, t),
-                labelOf: known,
-              }),
-            )
-          }
-        >
-          <Icon name="receipt" />
-          {t('slip.open')}
-        </button>
-        {txUrl ? (
-          <a className="btn btn-primary" href={txUrl} target="_blank" rel="noopener noreferrer">
-            {t('detail.viewOn', { name: explorerName })}
-          </a>
-        ) : (
-          /* ไม่มี explorer ของเชนนี้ → บอกเป็นข้อความ ไม่ใช่ปุ่มหลักที่กดไม่ได้ (ปุ่มที่กดไม่ได้ไม่บอกว่าต้องทำอะไรต่อ) */
-          <span className="hint foot-note">{t('detail.noExplorerHint')}</span>
-        )}
+        <ViewMenu
+          label={t('detail.view')}
+          items={[
+            {
+              key: 'slip',
+
+              label: t('slip.open'),
+              onSelect: () =>
+                setSlip(
+                  slipData(row, wallet, chainName, native, txUrl, {
+                    chainLogo,
+                    usdOfMove: moveUsd,
+                    swapCost,
+                    feeUsd: gasUsd,
+                    protocol: row.counterpartyName,
+                    protocolKind: kind ? t(`kind.${kind}`) : null,
+                    reasons: riskReasons(row, wallets, t),
+                    labelOf: known,
+                  }),
+                ),
+            },
+            txUrl ? { key: 'explorer', label: t('detail.viewOn', { name: explorerName }), href: txUrl } : { key: 'explorer', label: t('detail.noExplorer'), disabled: true },
+          ]}
+        />
       </div>
       {slip && <SlipLightbox data={slip} onClose={() => setSlip(null)} />}
     </aside>
+  );
+}
+
+interface ViewItem {
+  key: string;
+  label: string;
+  onSelect?: () => void;
+  href?: string;
+  disabled?: boolean;
+}
+
+/** ปุ่มเดียว + เมนูลอย (เปิดขึ้นด้านบน) — Esc/คลิกนอก ปิด, ลูกศรขึ้นลงเลื่อน, เปิดแล้วโฟกัสรายการแรก */
+function ViewMenu({ label, items }: { label: string; items: ViewItem[] }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const focusables = () => [...(root.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])') ?? [])];
+  useEffect(() => {
+    if (!open) return;
+    focusables()[0]?.focus();
+    const onDoc = (e: MouseEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  const close = () => {
+    setOpen(false);
+    trigger.current?.focus();
+  };
+  const onKey = (e: ReactKeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      close();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const list = focusables();
+      const i = list.indexOf(document.activeElement as HTMLElement);
+      list[(i + (e.key === 'ArrowDown' ? 1 : list.length - 1)) % list.length]?.focus();
+    }
+  };
+  return (
+    <div className="view-menu" ref={root} onKeyDown={onKey}>
+      {open && (
+        <div className="view-menu-panel" role="menu" id={menuId} aria-label={label}>
+          {items.map((it) =>
+            it.href ? (
+              <a key={it.key} className="view-menu-item" role="menuitem" href={it.href} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+                {it.label}
+              </a>
+            ) : (
+              <button
+                key={it.key}
+                type="button"
+                className="view-menu-item"
+                role="menuitem"
+                aria-disabled={it.disabled || undefined}
+                disabled={it.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  it.onSelect?.();
+                }}
+              >
+                {it.label}
+              </button>
+            ),
+          )}
+        </div>
+      )}
+      <button ref={trigger} type="button" className="btn btn-primary" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen(!open)}>
+        {label}
+      </button>
+    </div>
   );
 }

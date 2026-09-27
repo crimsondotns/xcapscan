@@ -24,3 +24,12 @@ test('normalizeCode accepts loose input; parseShare round-trips data in the frag
   assert.equal(parseShare(code)?.data, null);
   assert.equal(parseShare('nope'), null);
 });
+
+test('สลิป: ข้อความยาวเกิน → ย่อขนาดจนพอดี', async () => {
+  const { fitSize } = await import('../src/slip.ts');
+  // ctx ปลอม: กว้าง = จำนวนอักษร × ขนาด × 0.6
+  const ctx = { font: '700 26px x', measureText(s: string) { return { width: s.length * Number(/(\d+)px/.exec(this.font)![1]) * 0.6 }; } } as unknown as CanvasRenderingContext2D;
+  const n = fitSize(ctx, '+1,843.9193987153446', 26, 700, 276);
+  assert.ok(n < 26 && '+1,843.9193987153446'.length * n * 0.6 <= 276, `ย่อเหลือ ${n}px แล้วพอดี`);
+  assert.equal(fitSize(ctx, 'short', 12, 400, 276), 12, 'พอดีอยู่แล้ว ไม่ย่อ');
+});
