@@ -198,6 +198,7 @@ test('token transfer: To is the recipient from sends[].to_addr, not the token co
   assert.equal(page.rows[0]!.to, '0x498e711800dbdff630bc1e5c4598749b5826e2b2');
   assert.equal(page.rows[0]!.from, ME);
   assert.equal(page.rows[1]!.from, '0x498e711800dbdff630bc1e5c4598749b5826e2b2');
+  assert.equal(page.rows[1]!.to, ME, 'receive-only: To is this wallet, not the sender (other_addr)');
 });
 
 test('approve: allowance move flagged (not a send), To is the spender, contract is the token', async () => {

@@ -34,7 +34,7 @@ export interface Endpoint {
 }
 
 /** ส่วนบนสลิปที่ซ่อน/แสดงได้ (ตั้งค่า) */
-export const SLIP_FIELDS = ['headline', 'assets', 'usd', 'fee', 'swapCost', 'wallet', 'walletLabel', 'protocol', 'to', 'status', 'hash', 'qr', 'code', 'issued'] as const;
+export const SLIP_FIELDS = ['headline', 'assets', 'usd', 'fee', 'wallet', 'walletLabel', 'protocol', 'to', 'status', 'hash', 'qr', 'code', 'issued'] as const;
 export type SlipField = (typeof SLIP_FIELDS)[number];
 export type SlipShow = Record<SlipField, boolean>;
 export const SLIP_SHOW_DEFAULT: SlipShow = Object.fromEntries(SLIP_FIELDS.map((f) => [f, true])) as SlipShow;

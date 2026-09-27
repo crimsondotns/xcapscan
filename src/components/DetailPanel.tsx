@@ -89,7 +89,6 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
   const sentUsd = isSwap ? sumUsd(outs) : null;
   const recvUsd = isSwap ? sumUsd(ins) : null;
   const swapCost = sentUsd !== null && recvUsd !== null ? sentUsd - recvUsd : null;
-  const swapPct = swapCost !== null && sentUsd ? (swapCost / sentUsd) * 100 : null;
   const gasUsd = row.gasNative !== null ? usdOf(row.gasNative, row.gasUsd, row.chain, null, native) : row.gasUsd;
   const totalCost = swapCost !== null ? swapCost + (gasUsd ?? 0) : gasUsd;
 
@@ -249,15 +248,6 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
           </div>
           {isSwap && sentUsd !== null && <Row label={t('detail.sentValue')}>{formatUsd(sentUsd)}</Row>}
           {isSwap && recvUsd !== null && <Row label={t('detail.receivedValue')}>{formatUsd(recvUsd)}</Row>}
-          {swapCost !== null && (
-            <Row label={t('detail.swapCost')}>
-              <span>
-                {formatUsdExact(swapCost)}
-                {swapPct !== null && ` (${swapPct.toFixed(2)}%)`}
-                <span className="ev-note">{t('detail.swapCostHint')}</span>
-              </span>
-            </Row>
-          )}
           <Row label={t('detail.networkFee')}>
             {row.gasNative !== null ? (
               <span>
@@ -292,7 +282,6 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
                   slipData(row, wallet, chainName, native, txUrl, {
                     chainLogo,
                     usdOfMove: moveUsd,
-                    swapCost,
                     feeUsd: gasUsd,
                     protocol: row.counterpartyName,
                     protocolKind: kind ? t(`kind.${kind}`) : null,

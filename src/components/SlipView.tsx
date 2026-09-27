@@ -34,7 +34,6 @@ export function useSlipLabels() {
     flaggedTitle: t('slip.flaggedTitle'),
     why: t('slip.why'),
     verifyFirst: t('slip.verifyFirst'),
-    swapCost: t('detail.swapCost'),
     protocol: t('detail.protocol'),
   });
 }

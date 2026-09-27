@@ -51,7 +51,6 @@ export interface SlipData {
   tokenLogo?: string | null;
   chainLogo?: string | null;
   /** ส่วนต่างสวอป (USD) / ค่าเครือข่าย (USD) — แสดงผลอย่างเดียว */
-  swapCost?: number | null;
   feeUsd?: number | null;
   /** น่าสงสัย/หลอกลวง (อยู่ในแฮช) + เหตุผลที่แสดง (ข้อความตามภาษา ไม่อยู่ในแฮช) */
   flagged?: boolean;
@@ -74,7 +73,6 @@ const MAX_BYTES = 4 * 1024 * 1024;
 export interface SlipExtra {
   chainLogo?: string | null;
   usdOfMove?: (m: TxRow['moves'][number]) => number | null;
-  swapCost?: number | null;
   feeUsd?: number | null;
   protocol?: string | null;
   protocolKind?: string | null;
@@ -116,7 +114,6 @@ export function slipData(row: TxRow, wallet: { address: string; label: string } 
     url,
     tokenLogo: (row.moves.find((m) => m.amount !== 0 && m.logo) ?? row.moves.find((m) => m.logo))?.logo ?? null,
     chainLogo,
-    swapCost: extra.swapCost ?? null,
     feeUsd: extra.feeUsd ?? null,
     protocol: extra.protocol ?? null,
     protocolKind: extra.protocolKind ?? null,
@@ -289,7 +286,6 @@ interface Labels {
   flaggedTitle: string;
   why: string;
   verifyFirst: string;
-  swapCost: string;
   protocol: string;
   wallet: string;
   from: string;
@@ -603,8 +599,7 @@ export async function renderSlip(rec: SlipRecord, L: Labels, action: SlipAction 
     });
     if (show.assets && ordered.length) y += 4;
     if (show.fee && d.fee !== null) kv(L.fee, `${formatFeeNative(d.fee, d.feeSymbol)}${d.feeUsd !== null && d.feeUsd !== undefined ? ` (${formatFeeUsd(d.feeUsd)})` : ''}`);
-    if (show.swapCost && d.swapCost !== null && d.swapCost !== undefined) kv(L.swapCost, formatUsdExact(d.swapCost));
-    const midBlock = (show.assets && ordered.length > 0) || (show.fee && d.fee !== null) || (show.swapCost && d.swapCost !== null && d.swapCost !== undefined);
+    const midBlock = (show.assets && ordered.length > 0) || (show.fee && d.fee !== null);
     if (midBlock) {
       y += 2;
       dash(y);
@@ -617,9 +612,10 @@ export async function renderSlip(rec: SlipRecord, L: Labels, action: SlipAction 
     if (show.wallet) kv(L.wallet, show.walletLabel && d.walletLabel ? `${d.walletLabel} · ${shortAddr(d.wallet)}` : shortAddr(d.wallet));
     // from/to ที่เป็นกระเป๋าที่ตั้งชื่อไว้ → "ชื่อ · 0x…" (ปิด Wallet name แล้วเหลือแค่ที่อยู่)
     const named = (addr: string, label: string | null | undefined) => (show.walletLabel && label ? `${label} · ${shortAddr(addr)}` : shortAddr(addr));
-    if (show.wallet && d.from && d.from.toLowerCase() !== d.wallet.toLowerCase()) kv(L.from, named(d.from, d.fromLabel));
+    // แสดง From / To เสมอ แม้จะเป็นกระเป๋าเดียวกับแถว Wallet — สลิปต้องบอกทิศทางครบทั้งสองฝั่ง
+    if (show.wallet && d.from) kv(L.from, named(d.from, d.fromLabel));
     if (show.protocol && d.protocol) kv(d.protocolKind ?? L.protocol, d.protocol);
-    if (show.to && d.to && d.to.toLowerCase() !== d.wallet.toLowerCase()) kv(L.to, named(d.to, d.toLabel));
+    if (show.to && d.to) kv(L.to, named(d.to, d.toLabel));
     if (show.status) kv(L.status, ok ? `${L.statusOk} ✓` : `${L.statusFailed} ✗`);
     if (y > y0) {
       y += 2;

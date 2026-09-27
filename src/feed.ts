@@ -275,9 +275,12 @@ function fromHistoryList(body: Dict, walletId: string, address: string): Page {
     const sendTo = Array.isArray(item.sends) ? item.sends.map((m) => (isObj(m) ? str(m.to_addr) : null)).find((v): v is string => !!v) : undefined;
     const recvFrom = Array.isArray(item.receives) ? item.receives.map((m) => (isObj(m) ? str(m.from_addr) : null)).find((v): v is string => !!v) : undefined;
     const isTokenTransfer = !approve && !projectId && (str(tx.name) === 'transfer' || str(tx.name) === 'transferFrom' || (num(tx.value) === 0 && moves.length === 1));
-    const fromAddr = isTokenTransfer && recvFrom ? recvFrom : str(tx.from_addr);
+    // ขารับอย่างเดียว: ผู้ส่งคือ receives[].from_addr (ไม่มีก็ other_addr = คู่ธุรกรรม), ผู้รับคือกระเป๋านี้เอง
+    //   (เดิมใช้ other_addr เป็นผู้รับ → จาก/ถึง กลายเป็นกระเป๋าเดียวกัน)
+    const receiveOnly = type === 'receive';
+    const fromAddr = isTokenTransfer && recvFrom ? recvFrom : isTokenTransfer && receiveOnly && other ? other : str(tx.from_addr);
     // approve: ผู้รับคือ spender (โปรโตคอลที่ได้สิทธิ์) ส่วน tx.to_addr คือสัญญาโทเคน
-    const toAddr = approve ? (str(approve.spender) ?? other ?? str(tx.to_addr)) : isTokenTransfer ? (sendTo ?? other ?? str(tx.to_addr)) : str(tx.to_addr);
+    const toAddr = approve ? (str(approve.spender) ?? other ?? str(tx.to_addr)) : isTokenTransfer ? (receiveOnly ? address : (sendTo ?? other ?? str(tx.to_addr))) : str(tx.to_addr);
 
     // เหรียญพื้นเมือง: key ใน token_dict = ชื่อเชน (hood → ETH, hyper → HYPE)
     const native = isObj(tokens[chain]) ? (tokens[chain] as Dict) : {};
