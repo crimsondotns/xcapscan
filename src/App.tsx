@@ -181,17 +181,18 @@ export function App() {
     void loadStaggered(groupWallets.filter((w) => w.enabled && !feeds[w.id]?.loaded));
   }, [groupWallets, feeds, loadStaggered]);
 
-  function errMsg({ w, ep, e }: (typeof errors)[number]): string {
+  /* ห้ามบอกผู้ใช้ว่าเป็นแหล่งข้อมูลไหน — บอกแค่กระเป๋ากับสาเหตุ */
+  function errMsg({ w, e }: (typeof errors)[number]): string {
     const msg = e.kind === 'http' && e.status === 429 ? t('tx.errorRate') : e.kind === 'http' ? t('tx.errorHttp', { status: e.status }) : e.kind === 'shape' ? t('tx.errorShape') : t('tx.errorNet');
-    return `${w.label} · ${ep?.name ?? '?'}: ${t('tx.error', { msg })}`;
+    return `${w.label}: ${t('tx.error', { msg })}`;
   }
 
   const errorList =
     errors.length > 0 ? (
       <div className="field" aria-live="polite">
-        {errors.map((x) => (
-          <span key={`${x.w.id}:${x.ep?.id}`} className="error">
-            {errMsg(x)}
+        {[...new Set(errors.map(errMsg))].map((m) => (
+          <span key={m} className="error">
+            {m}
           </span>
         ))}
       </div>
