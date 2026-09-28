@@ -28,6 +28,9 @@ export function ipfsAlternatives(src: string): string[] {
   return IPFS_GATEWAYS.map((g) => `${g}${hash}`);
 }
 
+/** URL ต้นฉบับ → URL ที่โหลดสำเร็จจริง (gateway ที่ใช้ได้) — สลิปใช้ต่อ ไม่ต้องลองใหม่ */
+export const loadedLogo = new Map<string, string>();
+
 export function Logo({ src, name, size = 20 }: { src: string | null; name: string; size?: number }) {
   const [broken, setBroken] = useState(false);
   const [idx, setIdx] = useState(0);
@@ -47,6 +50,7 @@ export function Logo({ src, name, size = 20 }: { src: string | null; name: strin
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
+        onLoad={() => loadedLogo.set(src, url)}
         onError={() => {
           if (candidates.length > 0 && idx + 1 < candidates.length) setIdx(idx + 1);
           else setBroken(true);

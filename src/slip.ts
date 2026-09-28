@@ -13,7 +13,7 @@ import { absoluteUrl } from './router';
 import { fallbackProxy, proxied } from './proxy';
 import { SLIP_SHOW_DEFAULT, type SlipShow } from './store';
 import { identiconHue } from './components/Identicon';
-import { ipfsAlternatives } from './components/Logo';
+import { ipfsAlternatives, loadedLogo } from './components/Logo';
 
 export interface SlipMove {
   dir: 'in' | 'out';
@@ -307,11 +307,17 @@ interface Labels {
 /** โหลดรูปแบบ CORS-safe (ไม่งั้น canvas จะ taint แล้ว export ไม่ได้) — โฮสต์รูปไม่เปิด CORS → ลองผ่าน proxy; ไม่ได้/ช้าเกิน 4 วิ → null แล้วใช้ตัวอักษรแทน */
 async function loadImage(url: string | null | undefined): Promise<HTMLImageElement | null> {
   if (!url) return null;
-  // ลำดับเดียวกับ <Logo>: gateway IPFS ที่ตั้งไว้ก่อน แล้วค่อย URL เดิม
-  for (const src of [...ipfsAlternatives(url), url]) {
+  // URL ที่ <Logo> โหลดสำเร็จแล้วมาก่อน; ไม่งั้นลำดับเดียวกับ <Logo>: gateway IPFS ที่ตั้งไว้ (มีแล้วไม่ย้อนไป URL เดิม) หรือ URL เดิม
+  const alts = ipfsAlternatives(url);
+  const known = loadedLogo.get(url);
+  const list = [...new Set([...(known ? [known] : []), ...(alts.length ? alts : [url])])];
+  for (const src of list) {
     const first = proxied(src);
     const img = (await tryImage(first)) ?? (first === src ? await retry(src) : null);
-    if (img) return img;
+    if (img) {
+      loadedLogo.set(url, src);
+      return img;
+    }
   }
   return null;
 }
