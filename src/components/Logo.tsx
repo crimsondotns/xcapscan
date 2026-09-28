@@ -16,7 +16,7 @@ const IPFS_GATEWAYS: string[] = (env?.VITE_IPFS_GATEWAYS ?? '')
   .filter(Boolean);
 
 /** สลับไป gateway ถัดไปสำหรับ URL แบบ ipfs://<hash> หรือ https://<gateway>/ipfs/<hash> */
-function ipfsAlternatives(src: string): string[] {
+export function ipfsAlternatives(src: string): string[] {
   if (!IPFS_GATEWAYS.length) return [];
   let hash: string | null = null;
   if (src.startsWith('ipfs://')) hash = src.slice(7);

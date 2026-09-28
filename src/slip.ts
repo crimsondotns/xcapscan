@@ -13,6 +13,7 @@ import { absoluteUrl } from './router';
 import { fallbackProxy, proxied } from './proxy';
 import { SLIP_SHOW_DEFAULT, type SlipShow } from './store';
 import { identiconHue } from './components/Identicon';
+import { ipfsAlternatives } from './components/Logo';
 
 export interface SlipMove {
   dir: 'in' | 'out';
@@ -306,17 +307,25 @@ interface Labels {
 /** โหลดรูปแบบ CORS-safe (ไม่งั้น canvas จะ taint แล้ว export ไม่ได้) — โฮสต์รูปไม่เปิด CORS → ลองผ่าน proxy; ไม่ได้/ช้าเกิน 4 วิ → null แล้วใช้ตัวอักษรแทน */
 async function loadImage(url: string | null | undefined): Promise<HTMLImageElement | null> {
   if (!url) return null;
-  const first = proxied(url);
-  const img = await tryImage(first);
-  if (img) return img;
-  const alt = first === url ? fallbackProxy(url) : null;
-  return alt ? tryImage(alt) : null;
+  // ลำดับเดียวกับ <Logo>: gateway IPFS ที่ตั้งไว้ก่อน แล้วค่อย URL เดิม
+  for (const src of [...ipfsAlternatives(url), url]) {
+    const first = proxied(src);
+    const img = (await tryImage(first)) ?? (first === src ? await retry(src) : null);
+    if (img) return img;
+  }
+  return null;
+}
+
+function retry(src: string): Promise<HTMLImageElement | null> {
+  const alt = fallbackProxy(src);
+  return alt ? tryImage(alt) : Promise.resolve(null);
 }
 
 function tryImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((res) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
     const done = (v: HTMLImageElement | null) => {
       clearTimeout(timer);
       res(v);
