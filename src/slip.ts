@@ -10,6 +10,7 @@ import type { TxRow } from './feed';
 import { formatAmountFull, formatAmountShort, formatFeeNative, formatFeeUsd, formatStamp, formatUsdExact, shortAddr } from './format';
 import { tokenColor } from './chainStyle';
 import { absoluteUrl } from './router';
+import { fallbackProxy, proxied } from './proxy';
 import { SLIP_SHOW_DEFAULT, type SlipShow } from './store';
 import { identiconHue } from './components/Identicon';
 
@@ -302,9 +303,17 @@ interface Labels {
   statusFailed: string;
 }
 
-/** โหลดรูปแบบ CORS-safe (ไม่งั้น canvas จะ taint แล้ว export ไม่ได้) — โหลดไม่ได้/ช้าเกิน 4 วิ → null แล้วใช้ตัวอักษรแทน */
-function loadImage(url: string | null | undefined): Promise<HTMLImageElement | null> {
-  if (!url) return Promise.resolve(null);
+/** โหลดรูปแบบ CORS-safe (ไม่งั้น canvas จะ taint แล้ว export ไม่ได้) — โฮสต์รูปไม่เปิด CORS → ลองผ่าน proxy; ไม่ได้/ช้าเกิน 4 วิ → null แล้วใช้ตัวอักษรแทน */
+async function loadImage(url: string | null | undefined): Promise<HTMLImageElement | null> {
+  if (!url) return null;
+  const first = proxied(url);
+  const img = await tryImage(first);
+  if (img) return img;
+  const alt = first === url ? fallbackProxy(url) : null;
+  return alt ? tryImage(alt) : null;
+}
+
+function tryImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((res) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -315,7 +324,7 @@ function loadImage(url: string | null | undefined): Promise<HTMLImageElement | n
     const timer = setTimeout(() => done(null), 4000);
     img.onload = () => done(img);
     img.onerror = () => done(null);
-    img.src = url;
+    img.src = src;
   });
 }
 
