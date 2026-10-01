@@ -10,11 +10,11 @@ export function Dialog({ open, onClose, title, children, wide = false }: { open:
   if (mobile)
     return (
       <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-        <DrawerContent className="max-h-[92dvh]">
+        <DrawerContent className={wide ? 'h-[92dvh] max-h-[92dvh]' : 'max-h-[92dvh]'}>
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>
           </DrawerHeader>
-          <div className="flex flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4">{children}</div>
+          <div className={wide ? 'flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4' : 'flex flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4'}>{children}</div>
         </DrawerContent>
       </Drawer>
     );
