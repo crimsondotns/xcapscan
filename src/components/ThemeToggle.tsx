@@ -1,4 +1,4 @@
-/** สลับธีม — segmented control ทรง pill สองช่อง (สว่าง/มืด) ตาม docs/design-system.md */
+/** สลับธีม — segmented control ทรง pill สองช่อง (สว่าง/มืด) */
 import { useI18n } from '../i18n';
 import { useTheme, type Theme } from '../theme';
 import { Icon } from './Icon';

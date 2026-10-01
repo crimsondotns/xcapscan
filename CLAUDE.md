@@ -2,20 +2,19 @@
 
 XCap Scan — static multi-wallet transaction list (React 19 + Vite, GitHub Pages, no backend, no auth).
 
-## Design system — mandatory
+## Design system — mandatory: shadcn/ui (user decision, 2026-10-01)
 
-**Before any UI change, new element, or edit: read `docs/design-system.md` and match it.** It is the single source of truth for colour, type, spacing, radius, elevation, components, motion and accessibility. Tokens live in `src/styles/tokens.css` and map 1:1 to that file; never invent values outside it.
+**Before any UI change, new element, or edit: read `.agents/skills/shadcn/SKILL.md` and the rule files it links (`rules/styling.md`, `rules/forms.md`, `rules/composition.md`, `rules/icons.md`, `rules/base-vs-radix.md`, `customization.md`) and follow them.** They are the single source of truth for colour, type, spacing, radius, components, forms, icons and accessibility. The old OpenAI-based `docs/design-system.md` was deleted on purpose; never bring it or its rules back.
 
-Key rules from it: white canvas / black ink, neutral surfaces only, semantic colour only for real status; Suisse Intl ONLY, including numbers and hashes (no monospace): Regular 400 body / Book 500 secondary / Medium 600 labels-buttons-headings; files in public/assets/fonts/ (not committed); `!important` override in fonts.css; Thai glyphs fall to system only because the font lacks them, sentence case, weight 500 for labels/buttons; pill buttons and pill inputs (every text field is full-round), 12px cards, 8–16px containers; hairline borders instead of shadows; 44px minimum control height; visible 2px focus outline; `prefers-reduced-motion` honoured.
+Key rules: semantic tokens only (`background`, `foreground`, `primary`, `muted`, `muted-foreground`, `border`, `ring`, `destructive`…), never raw colours and no manual dark overrides; use existing shadcn components and their built-in variants before custom markup; `className` for layout, not for restyling components; `flex` + `gap-*` (no `space-*`); `size-*` for equal sides; forms use `FieldGroup` + `Field`, option sets use `ToggleGroup`, buttons inside inputs use `InputGroup`; overlays (`Dialog`, `Sheet`, `Drawer`) always have a title; empty states `Empty`, loading `Skeleton`, labels `Badge`, dividers `Separator`; icons in buttons use `data-icon`, no sizing classes on icons. Both light and dark theme must work, and `prefers-reduced-motion` is honoured.
 
-Dark theme: the file's neutrals inverted but never pure black — bg #171717, soft #262626, hover #303030, ink #f5f5f5 (`:root[data-theme='dark']` in `tokens.css`); never use raw colours in components so both themes stay in sync.
+The app itself still runs on plain CSS (`src/styles/tokens.css`) and has not been migrated to Tailwind/shadcn yet; until it is, new or changed UI follows the shadcn rules above in look and structure, with values kept as tokens in `tokens.css`. The shadcn reference build lives in `mockups/shadcn-filter/` (Vite + Tailwind 4, `base-nova`, Base UI).
 
 ## Before every delivery — mandatory audit
 
-1. Re-read `docs/design-system.md` (must be byte-identical to `/Users/Kakachi/Downloads/DesignSystem/OpenAI/openai.com-design-system.md`; `diff -q` them).
-2. Audit every screen and state — default, hover, focus-visible, active/selected, disabled, error, empty, loading — **in both Light and Dark theme** against the file **exactly**: colours from tokens only, type scale/weights, spacing steps, radii (pill controls, 12px cards, 16px large surfaces), hairline borders, shadow only on floating panels, 44px primary controls / 40px inputs and dropdown triggers (user override of the file's 48px — keep), 2px focus outline, motion 120/180/280ms standard easing, sentence case.
-3. Hover check is done with every `:hover` rule forced on (scratch copy of dist, not in repo) in both themes: no control may blend into its background or lose its text; primary hover uses `--color-ink-hover`, everything else `--color-hover` / `--color-line-hover`. Never let a generic `.btn:hover` outrank `.btn-primary`.
-4. Any mismatch = fix first, then re-run `pnpm typecheck && pnpm check && pnpm test && pnpm build`. Never skip, never deliver with a known deviation.
+1. Re-read `.agents/skills/shadcn/SKILL.md` and the relevant rule files.
+2. Audit every screen and state — default, hover, focus-visible, active/selected, disabled, error, empty, loading — **in both Light and Dark theme** against those rules.
+3. Any mismatch = fix first, then re-run `pnpm typecheck && pnpm check && pnpm test && pnpm build`. Never skip, never deliver with a known deviation.
 
 ## Responsive (user spec, 2026-09-21)
 
@@ -37,9 +36,9 @@ Never collapses. Each row is a button: click = switch the active wallet (table f
 - **Zero hints to the client.** No placeholder text, helper text, example URLs, placeholder syntax (`{address}` etc.), chain explanations or request previews in the UI or README. Labels only; errors are generic ("Invalid URL"). The user is expected to know.
 - All UI text goes through `t()` in `src/i18n.tsx` (Thai key + English pair). No literal Thai in `.tsx`.
 - No `px` font-size in CSS; use `--size-*` tokens. No gradients.
-- Icons only via `components/Icon.tsx`.
+- Icons only via `components/Icon.tsx` until the shadcn migration (then lucide via `data-icon`, per the skill).
 - No `type="number"` inputs (spinner arrows banned): numeric fields are `type="text" inputMode="numeric"`, typed by hand.
-- No native `<select>`; every dropdown uses `components/Dropdown.tsx` (pill trigger + floating 12px panel).
+- No native `<select>`; every dropdown uses `components/Dropdown.tsx` until the shadcn migration (then shadcn `Select` / `DropdownMenu` / `Combobox`).
 
 ## Commands
 

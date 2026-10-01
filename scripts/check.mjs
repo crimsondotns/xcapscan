@@ -2,7 +2,7 @@
  * ด่านของ repo — รันก่อน build ใน CI
  * 1. ไม่มี URL ของแหล่งข้อมูลจริงฝังในซอร์ส (ผู้ใช้ต้องใส่เองตอนใช้งาน)
  * 2. ไม่มีข้อความไทยตรงใน .tsx (ทุกข้อความผ่าน t())
- * 3. CSS: ไม่มี font-size เป็น px ลอย, ไม่มี gradient, ไม่มี uppercase, สีดิบอยู่ได้เฉพาะ tokens.css (ดู docs/design-system.md)
+ * 3. CSS: ไม่มี font-size เป็น px ลอย, ไม่มี gradient, ไม่มี uppercase, สีดิบอยู่ได้เฉพาะ tokens.css
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';

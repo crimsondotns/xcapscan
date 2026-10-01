@@ -1,5 +1,5 @@
 /**
- * Dropdown panel ตาม docs/design-system.md — ตัวเดียวใช้ทุกที่ ห้ามใช้ <select> native
+ * Dropdown panel — ตัวเดียวใช้ทุกที่ ห้ามใช้ <select> native
  * ปุ่มเปิดเป็น pill (secondary button), แผงลอยมุม 12px เส้นขอบ hairline เงาอ่อน
  * รายการสูง 40px มุม 8px; คีย์บอร์ด: ลูกศรเลื่อน, Home/End, Enter/Space เลือก, Esc ปิด
  */

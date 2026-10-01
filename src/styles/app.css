@@ -1,4 +1,4 @@
-/* สไตล์ทั้งหน้า — ทุกค่าผ่านโทเคนใน tokens.css ซึ่งแมปกับ docs/design-system.md */
+/* สไตล์ทั้งหน้า — ทุกค่าผ่านโทเคนใน tokens.css ตามกติกา .agents/skills/shadcn */
 @import './fonts.css';
 @import './tokens.css';
 
