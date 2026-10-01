@@ -38,7 +38,7 @@ export function DetailPanel(props: PanelProps) {
   return (
     <>
       <Sheet open={props.row !== null} onOpenChange={(o) => !o && props.onClose()}>
-        <SheetContent side={mobile ? 'bottom' : 'right'} className={cn('gap-0', mobile ? 'h-dvh' : 'w-full sm:max-w-[440px]')}>
+        <SheetContent side={mobile ? 'bottom' : 'right'} className={cn('gap-0', mobile ? 'max-h-[92dvh] rounded-t-xl' : 'w-full sm:max-w-[440px]')}>
           {row && <DetailBody {...props} row={row} onSlip={setSlip} />}
         </SheetContent>
       </Sheet>

@@ -9,6 +9,9 @@ import { canvasBlob, renderSlip, saveSlip, slipCode, type SlipAction, type SlipD
 import { Icon } from './Icon';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export function useSlipLabels() {
   const { t } = useI18n();
@@ -102,6 +105,9 @@ export function SlipPicture({ img, alt, className, name = 'xcapscan-slip.png' }:
   const { toast } = useToast();
   const [selected, setSelected] = useState('');
   const shareable = useMemo(canShareImage, []);
+  const mobile = useIsMobile();
+  const [sheet, setSheet] = useState(false);
+  const press = useRef<number | undefined>(undefined);
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   useEffect(() => {
@@ -123,15 +129,19 @@ export function SlipPicture({ img, alt, className, name = 'xcapscan-slip.png' }:
           toast(fail);
         },
       );
-  return (
-    <ContextMenu
-      onOpenChange={(open) => {
-        if (!open) return;
-        const sel = window.getSelection();
-        setSelected(sel && !sel.isCollapsed && box.current?.contains(sel.anchorNode) ? sel.toString() : '');
-      }}
-    >
-      <ContextMenuTrigger render={<div ref={box} className={`slip-pic ${className ?? ''}`} style={{ aspectRatio: `${img.width} / ${img.height}` }} />}>
+  const grab = () => {
+    const sel = window.getSelection();
+    setSelected(sel && !sel.isCollapsed && box.current?.contains(sel.anchorNode) ? sel.toString() : '');
+  };
+  type Action = { key: string; icon: typeof CopyIcon; label: string; go: () => void };
+  const actions = ([
+    selected && { key: 'text', icon: TypeIcon, label: t('slip.menu.copyText'), go: () => run(() => navigator.clipboard.writeText(selected), t('slip.did.copy'), t('slip.copyFailed')) },
+    { key: 'copy', icon: CopyIcon, label: t('slip.menu.copy'), go: () => run(() => copyImage(img.url), t('slip.did.copy'), t('slip.copyFailed')) },
+    { key: 'dl', icon: DownloadIcon, label: t('slip.menu.download'), go: () => run(() => downloadImage(img.url, name), t('slip.did.download'), t('slip.saveFailed')) },
+    shareable && { key: 'save', icon: ImageDownIcon, label: t('slip.menu.save'), go: () => run(async () => navigator.share({ files: [await imageFile(img.url, name)] }), t('slip.did.save'), t('slip.saveFailed')) },
+  ] as Array<Action | false | ''>).filter((a): a is Action => !!a);
+  const picture = (
+    <>
       <img src={img.url} alt={alt} width={img.width} height={img.height} draggable={false} />
       <div className="slip-text" style={{ width: img.width, height: img.height, transform: `scale(${scale})` }} aria-hidden="true">
         {img.texts.map((tx, i) => (
@@ -140,30 +150,78 @@ export function SlipPicture({ img, alt, className, name = 'xcapscan-slip.png' }:
           </span>
         ))}
       </div>
-      </ContextMenuTrigger>
-      {/* คลิกขวา (เดสก์ท็อป) / กดค้าง (มือถือ) */}
+    </>
+  );
+  const boxProps = { ref: box, className: `slip-pic ${className ?? ''}`, style: { aspectRatio: `${img.width} / ${img.height}` } };
+
+  /* มือถือ (ผู้ใช้ 2026-10-01): กดค้าง → Drawer ล่างจอ แทนเมนูลอย */
+  if (mobile) {
+    const startPress = () => {
+      clearTimeout(press.current);
+      press.current = window.setTimeout(() => {
+        grab();
+        setSheet(true);
+      }, 500);
+    };
+    const cancelPress = () => clearTimeout(press.current);
+    return (
+      <>
+        <div
+          {...boxProps}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            cancelPress();
+            grab();
+            setSheet(true);
+          }}
+          onPointerDown={(e) => e.pointerType !== 'mouse' && startPress()}
+          onPointerUp={cancelPress}
+          onPointerMove={cancelPress}
+          onPointerCancel={cancelPress}
+        >
+          {picture}
+        </div>
+        <Drawer open={sheet} onOpenChange={setSheet}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>{t('slip.title')}</DrawerTitle>
+            </DrawerHeader>
+            <div className="flex flex-col gap-1 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              {actions.map(({ key, icon: I, label, go }) => (
+                <Button
+                  key={key}
+                  type="button"
+                  variant="ghost"
+                  size="lg"
+                  className="justify-start"
+                  onClick={() => {
+                    setSheet(false);
+                    go();
+                  }}
+                >
+                  <I data-icon="inline-start" />
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </>
+    );
+  }
+
+  return (
+    <ContextMenu onOpenChange={(open) => open && grab()}>
+      <ContextMenuTrigger render={<div {...boxProps} />}>{picture}</ContextMenuTrigger>
+      {/* คลิกขวา (เดสก์ท็อป) */}
       <ContextMenuContent className="min-w-52">
         <ContextMenuGroup>
-          {selected && (
-            <ContextMenuItem onClick={() => run(() => navigator.clipboard.writeText(selected), t('slip.did.copy'), t('slip.copyFailed'))}>
-              <TypeIcon />
-              {t('slip.menu.copyText')}
+          {actions.map(({ key, icon: I, label, go }) => (
+            <ContextMenuItem key={key} onClick={go}>
+              <I />
+              {label}
             </ContextMenuItem>
-          )}
-          <ContextMenuItem onClick={() => run(() => copyImage(img.url), t('slip.did.copy'), t('slip.copyFailed'))}>
-            <CopyIcon />
-            {t('slip.menu.copy')}
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => run(() => downloadImage(img.url, name), t('slip.did.download'), t('slip.saveFailed'))}>
-            <DownloadIcon />
-            {t('slip.menu.download')}
-          </ContextMenuItem>
-          {shareable && (
-            <ContextMenuItem onClick={() => run(async () => navigator.share({ files: [await imageFile(img.url, name)] }), t('slip.did.save'), t('slip.saveFailed'))}>
-              <ImageDownIcon />
-              {t('slip.menu.save')}
-            </ContextMenuItem>
-          )}
+          ))}
         </ContextMenuGroup>
       </ContextMenuContent>
     </ContextMenu>

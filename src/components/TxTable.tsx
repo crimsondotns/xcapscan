@@ -334,7 +334,8 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                       }
                     }}
                   >
-                    <TableCell>
+                    {/* max-w-0 + w-full: คอลัมน์ Type กินที่ที่เหลือแต่ไม่ดันตาราง → บรรทัดรองตัด … ได้ */}
+                    <TableCell className="w-full max-w-0">
                       <span className="act">
                         <span className="act-icon">
                           {isSwap ? (
@@ -350,7 +351,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                           </span>
                         </span>
                         <span className="act-text">
-                          <span className="act-title">
+                          <span className="act-title truncate">
                             {title}
                             {r.flagged && (
                               <span className="flag" title={t('tx.scam')}>
@@ -358,7 +359,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                               </span>
                             )}
                           </span>
-                          <span className="act-sub" title={labels.get(r.walletId)}>
+                          <span className="act-sub truncate" title={labels.get(r.walletId)}>
                             {onToken && symbols.length > 0 ? (
                               <>
                                 {symbols.map((sym, i) => (
