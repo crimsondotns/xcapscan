@@ -1193,6 +1193,7 @@ input[type='file'].input::file-selector-button {
   max-width: 100%;
 }
 .slip-pic > img {
+  -webkit-touch-callout: none; /* กดค้างบนมือถือ = เมนูของแอป ไม่ใช่เมนูรูปของระบบ */
   display: block;
   width: 100%;
   height: auto;

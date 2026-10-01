@@ -79,7 +79,7 @@ export function VerifyDialog({ open, initial, onClose, seen }: { open: boolean; 
           </Alert>
           {result.rec && (
             <div className="grid min-h-40 place-items-center" aria-busy={!img}>
-              {img ? <SlipPicture img={img} alt={t('slip.title')} /> : <Spinner />}
+              {img ? <SlipPicture img={img} alt={t('slip.title')} name={`xcapscan-slip-${result.rec.code}.png`} /> : <Spinner />}
             </div>
           )}
         </div>
