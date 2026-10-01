@@ -118,54 +118,35 @@ function useChips(f: AdvFilter): Array<[ChipKey, string]> {
 
 /* ---------- ชิ้นส่วนฟอร์ม ---------- */
 
-function parseTyped(s: string): Date | undefined {
-  const v = s.trim();
-  const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
-  if (m) return new Date(+m[3]! < 100 ? 2000 + +m[3]! : +m[3]!, +m[2]! - 1, +m[1]!);
-  if (!/[a-z]/i.test(v) || !/\d{4}/.test(v)) return undefined;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? undefined : d;
+function formatDate(date: Date | undefined) {
+  if (!date) return '';
+  return date.toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' });
 }
-const fmtLong = (d?: Date) => (d ? d.toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' }) : '');
+function isValidDate(date: Date | undefined): date is Date {
+  return !!date && !Number.isNaN(date.getTime());
+}
 
-/** ช่องวันที่ + ปุ่มปฏิทิน (shadcn date picker input) — พิมพ์เองได้, ↓ เปิดปฏิทิน, เลือกวันแล้วปิดเอง */
-function DateInput({ id, label, date, onChange, min, max }: { id: string; label: string; date?: Date; onChange: (d?: Date) => void; min?: Date; max?: Date }) {
+/** ช่องวันที่ตามแบบ shadcn Date Picker Input — พิมพ์เองได้, ↓ เปิดปฏิทิน, เลือกวันแล้วปิดเอง (ไม่มี placeholder ตามกฎ Zero hints) */
+function DateInput({ id, label, date, onChange }: { id: string; label: string; date?: Date; onChange: (d?: Date) => void }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const [month, setMonth] = useState<Date | undefined>(date ?? max ?? new Date());
-  const [value, setValue] = useState(fmtLong(date));
-  const [invalid, setInvalid] = useState(false);
-  const [prev, setPrev] = useState(date);
-  if (prev !== date) {
-    setPrev(date);
-    if (!(date && parseTyped(value)?.getTime() === date.getTime())) setValue(fmtLong(date));
-    setInvalid(false);
-  }
-  const today = new Date();
-  const last = max && max < today ? max : today;
+  const [month, setMonth] = useState<Date | undefined>(date);
+  const [value, setValue] = useState(formatDate(date));
   return (
-    <Field data-invalid={invalid || undefined}>
+    <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <InputGroup>
         <InputGroupInput
           id={id}
           value={value}
-          aria-invalid={invalid}
           autoComplete="off"
           onChange={(e) => {
-            const v = e.target.value;
-            setValue(v);
-            if (!v.trim()) {
-              setInvalid(false);
-              onChange(undefined);
-              return;
-            }
-            const d = parseTyped(v);
-            setInvalid(!d);
-            if (d) {
-              setMonth(d);
+            const d = new Date(e.target.value);
+            setValue(e.target.value);
+            if (isValidDate(d)) {
               onChange(d);
-            }
+              setMonth(d);
+            } else if (!e.target.value.trim()) onChange(undefined);
           }}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown') {
@@ -176,21 +157,23 @@ function DateInput({ id, label, date, onChange, min, max }: { id: string; label:
         />
         <InputGroupAddon align="inline-end">
           <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger render={<InputGroupButton variant="ghost" size="icon-xs" aria-label={t('af.pickDate')} />}>
-              <CalendarIcon />
-            </PopoverTrigger>
+            <PopoverTrigger
+              render={
+                <InputGroupButton variant="ghost" size="icon-xs" aria-label={t('af.pickDate')}>
+                  <CalendarIcon />
+                  <span className="sr-only">{t('af.pickDate')}</span>
+                </InputGroupButton>
+              }
+            />
             <PopoverContent className="w-auto overflow-hidden p-0" align="end" alignOffset={-8} sideOffset={10}>
               <Calendar
                 mode="single"
-                captionLayout="dropdown"
                 selected={date}
                 month={month}
                 onMonthChange={setMonth}
-                startMonth={new Date(2015, 0)}
-                endMonth={today}
-                disabled={[{ after: last }, ...(min ? [{ before: min }] : [])]}
                 onSelect={(d) => {
                   onChange(d);
+                  setValue(formatDate(d));
                   setOpen(false);
                 }}
               />
@@ -289,8 +272,8 @@ function Form({ f, set, tokens, cols, idp }: { f: AdvFilter; set: (p: Partial<Ad
         )}
         {f.date === 'custom' && (
           <div className={cols === 2 ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3'}>
-            <DateInput id={`${idp}-from`} label={t('af.from')} date={f.from} max={f.to} onChange={(d) => set({ from: d })} />
-            <DateInput id={`${idp}-to`} label={t('af.to')} date={f.to} min={f.from} onChange={(d) => set({ to: d })} />
+            <DateInput id={`${idp}-from`} label={t('af.from')} date={f.from} onChange={(d) => set({ from: d })} />
+            <DateInput id={`${idp}-to`} label={t('af.to')} date={f.to} onChange={(d) => set({ to: d })} />
           </div>
         )}
       </FieldSet>
