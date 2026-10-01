@@ -3,7 +3,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useI18n } from '../i18n';
 import { normalizeCode, verifySlip, type SlipData, type SlipRecord, type Verdict } from '../slip';
 import { Dialog } from './Dialog';
-import { Icon } from './Icon';
+import { ShieldCheckIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { SlipPicture, useSlipImage } from './SlipView';
 
 export function VerifyDialog({ open, initial, onClose, seen }: { open: boolean; initial: { code: string; data: SlipData | null } | null; onClose: () => void; seen: (hash: string) => boolean }) {
@@ -40,16 +45,13 @@ export function VerifyDialog({ open, initial, onClose, seen }: { open: boolean; 
   return (
     <Dialog open={open} onClose={onClose} title={t('slip.verify')}>
       <form onSubmit={submit} noValidate>
-        <div className="field">
-          <label className="label" htmlFor="slip-code">
-            {t('slip.code')}
-          </label>
-          <div className="inline">
-            <input
+        <Field data-invalid={err ? true : undefined}>
+          <FieldLabel htmlFor="slip-code">{t('slip.code')}</FieldLabel>
+          <div className="flex gap-2">
+            <Input
               id="slip-code"
               name="code"
               type="text"
-              className="input mono"
               value={code}
               onChange={(e) => {
                 setCode(e.target.value);
@@ -57,33 +59,27 @@ export function VerifyDialog({ open, initial, onClose, seen }: { open: boolean; 
               }}
               autoComplete="off"
               spellCheck={false}
-              aria-invalid={err ? 'true' : undefined}
+              aria-invalid={err ? true : undefined}
             />
-            <button type="submit" className="btn btn-primary" disabled={code.trim() === ''}>
+            <Button type="submit" disabled={code.trim() === ''}>
               {t('slip.verifyBtn')}
-            </button>
+            </Button>
           </div>
-          {err && (
-            <span className="error" aria-live="polite">
-              {err}
-            </span>
-          )}
-        </div>
+          {err && <FieldError aria-live="polite">{err}</FieldError>}
+        </Field>
       </form>
       {result && (
-        <div className="stack" aria-live="polite">
-          <p className="verdict" data-verdict={result.verdict}>
-            <Icon name={result.verdict === 'valid' ? 'shield' : result.verdict === 'tampered' ? 'alert' : 'x'} />
-            <span>
-              <strong>{t(`slip.verdict.${result.verdict}`)}</strong>
-              <span className="hint">
-                {result.verdict === 'unknown' ? t('slip.unknownHint') : result.rec && seen(result.rec.data.hash) ? t('slip.seenHint') : result.stored ? t('slip.storedHint') : t('slip.linkHint')}
-              </span>
-            </span>
-          </p>
+        <div className="flex flex-col gap-4" aria-live="polite">
+          <Alert variant={result.verdict === 'valid' ? 'default' : 'destructive'}>
+            {result.verdict === 'valid' ? <ShieldCheckIcon /> : result.verdict === 'tampered' ? <TriangleAlertIcon /> : <XIcon />}
+            <AlertTitle>{t(`slip.verdict.${result.verdict}`)}</AlertTitle>
+            <AlertDescription>
+              {result.verdict === 'unknown' ? t('slip.unknownHint') : result.rec && seen(result.rec.data.hash) ? t('slip.seenHint') : result.stored ? t('slip.storedHint') : t('slip.linkHint')}
+            </AlertDescription>
+          </Alert>
           {result.rec && (
-            <div className="slip-preview" aria-busy={!img}>
-              {img ? <SlipPicture img={img} alt={t('slip.title')} /> : <span className="spinner" aria-hidden="true" />}
+            <div className="grid min-h-40 place-items-center" aria-busy={!img}>
+              {img ? <SlipPicture img={img} alt={t('slip.title')} /> : <Spinner />}
             </div>
           )}
         </div>

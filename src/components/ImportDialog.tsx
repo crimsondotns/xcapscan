@@ -3,7 +3,13 @@ import { useI18n } from '../i18n';
 import { useStore } from '../store';
 import { ImportError, readWalletFile, SAMPLE_CSV, type ImportRow } from '../importWallets';
 import { downloadText } from '../download';
-import { Icon } from './Icon';
+import { DownloadIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog } from './Dialog';
 import { useToast } from './Toast';
 
@@ -54,73 +60,68 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
       }}
       title={t('import.title')}
     >
-      <div className="stack">
-        <div className="field">
-          <label className="label" htmlFor="import-file">
-            {t('import.file')}
-          </label>
-          <input id="import-file" ref={fileRef} name="file" type="file" className="input" accept=".csv,.xlsx,.xlsm,.xls,text/csv" onChange={(e) => void pick(e.target.files?.[0])} />
-          <span className="hint">{t('import.columns')}</span>
-          <button type="button" className="btn-text" onClick={() => downloadText('xcapscan-wallets-sample.csv', SAMPLE_CSV, 'text/csv')}>
-            <Icon name="download" />
+      <FieldGroup>
+        <Field data-invalid={err ? true : undefined}>
+          <FieldLabel htmlFor="import-file">{t('import.file')}</FieldLabel>
+          <Input id="import-file" ref={fileRef} name="file" type="file" accept=".csv,.xlsx,.xlsm,.xls,text/csv" onChange={(e) => void pick(e.target.files?.[0])} />
+          <FieldDescription>{t('import.columns')}</FieldDescription>
+          <Button type="button" variant="link" className="self-start px-0" onClick={() => downloadText('xcapscan-wallets-sample.csv', SAMPLE_CSV, 'text/csv')}>
+            <DownloadIcon data-icon="inline-start" />
             {t('import.sample')}
-          </button>
+          </Button>
           {busy && (
-            <span className="hint" aria-live="polite">
+            <FieldDescription aria-live="polite" className="flex items-center gap-2">
+              <Spinner />
               {t('import.reading')}
-            </span>
+            </FieldDescription>
           )}
-          {err && (
-            <span className="error" aria-live="polite">
-              {err}
-            </span>
-          )}
-        </div>
+          {err && <FieldError aria-live="polite">{err}</FieldError>}
+        </Field>
 
         {rows && (
-          <>
-            <p className="hint" aria-live="polite">
-              {t('import.preview', { ok: ok.length, bad: rows.length - ok.length })}
-            </p>
-            <div className="preview">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">{t('import.col.label')}</th>
-                    <th scope="col">{t('import.col.address')}</th>
-                    <th scope="col">{t('import.col.status')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+          <Field>
+            <FieldDescription aria-live="polite">{t('import.preview', { ok: ok.length, bad: rows.length - ok.length })}</FieldDescription>
+            <div className="max-h-72 overflow-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead scope="col">{t('import.col.label')}</TableHead>
+                    <TableHead scope="col">{t('import.col.address')}</TableHead>
+                    <TableHead scope="col">{t('import.col.status')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {rows.map((r, i) => (
-                    <tr key={i} data-bad={r.status !== 'ok'}>
-                      <td>{r.label || '—'}</td>
-                      <td className="mono">{r.address || '—'}</td>
-                      <td>{t(r.status === 'ok' ? 'import.row.ok' : r.status === 'dupe' ? 'import.row.dupe' : 'import.row.bad')}</td>
-                    </tr>
+                    <TableRow key={i} className={r.status !== 'ok' ? 'text-muted-foreground' : undefined}>
+                      <TableCell>{r.label || '—'}</TableCell>
+                      <TableCell className="max-w-56 truncate">{r.address || '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant={r.status === 'ok' ? 'secondary' : 'destructive'}>{t(r.status === 'ok' ? 'import.row.ok' : r.status === 'dupe' ? 'import.row.dupe' : 'import.row.bad')}</Badge>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
-          </>
+          </Field>
         )}
 
-        <div className="dlg-actions">
-          <button
+        <div className="flex justify-end gap-2">
+          <Button
             type="button"
-            className="btn"
+            variant="outline"
             onClick={() => {
               reset();
               onClose();
             }}
           >
             {t('dialog.cancel')}
-          </button>
-          <button type="button" className="btn btn-primary" disabled={!ok.length} onClick={submit}>
+          </Button>
+          <Button type="button" disabled={!ok.length} onClick={submit}>
             {t('import.submit', { n: ok.length })}
-          </button>
+          </Button>
         </div>
-      </div>
+      </FieldGroup>
     </Dialog>
   );
 }

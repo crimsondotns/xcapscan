@@ -8,7 +8,12 @@ import { SLIP_FIELDS, snapshot, useStore } from '../store';
 import { Dialog } from './Dialog';
 import { DialogTabs, type TabDef } from './DialogTabs';
 import { Dropdown } from './Dropdown';
-import { Icon } from './Icon';
+import { DownloadIcon, LockIcon, UploadIcon } from 'lucide-react';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from './Toast';
 import { backupFilename, buildBackup, mergeData, readBackup, BackupError, type PortableData } from '../backup';
 import { decryptJson, encryptJson, keyFromPassphrase, randomSalt } from '../crypto';
@@ -24,25 +29,46 @@ const TABS = (t: (k: MessageKey) => string): Array<TabDef<Tab>> => [
 ];
 
 /** หนึ่งแถวของหน้าตั้งค่า: ชื่อ (+คำอธิบาย) ซ้าย ตัวควบคุมขวา */
-function Row({ title, desc, children }: { title: string; desc?: string; children: ReactNode }) {
+function Row({ title, desc, htmlFor, children }: { title: string; desc?: string; htmlFor?: string; children: ReactNode }) {
   return (
-    <div className="set-row">
-      <span className="set-row-main">
-        <span className="set-row-title">{title}</span>
-        {desc && <span className="set-row-desc">{desc}</span>}
-      </span>
+    <Field orientation="horizontal">
+      <FieldContent>
+        <FieldLabel htmlFor={htmlFor}>{title}</FieldLabel>
+        {desc && <FieldDescription>{desc}</FieldDescription>}
+      </FieldContent>
       {children}
-    </div>
+    </Field>
   );
 }
 
 function Group({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
-    <section className="set-group">
-      <h3 className="set-group-title">{title}</h3>
-      <div className="set-rows">{children}</div>
-      {note && <p className="hint">{note}</p>}
-    </section>
+    <FieldSet>
+      <FieldLegend>{title}</FieldLegend>
+      <FieldGroup className="gap-4">{children}</FieldGroup>
+      {note && <FieldDescription>{note}</FieldDescription>}
+    </FieldSet>
+  );
+}
+
+function PassField({ id, label, value, onChange, autoComplete, autoFocus, onEnter, error }: { id: string; label: string; value: string; onChange: (v: string) => void; autoComplete: string; autoFocus?: boolean; onEnter?: () => void; error?: string | null }) {
+  return (
+    <Field data-invalid={error ? true : undefined}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input
+        id={id}
+        type="password"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete={autoComplete}
+        autoFocus={autoFocus}
+        aria-invalid={error ? true : undefined}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && onEnter) onEnter();
+        }}
+      />
+      {error && <FieldError>{error}</FieldError>}
+    </Field>
   );
 }
 
@@ -171,13 +197,13 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
           {tab === 'general' && (
             <>
               <Group title={t('settings.display')}>
-                <Row title={t('settings.pageSize')} desc={t('settings.pageSizeDesc')}>
-                  <input
+                <Row title={t('settings.pageSize')} desc={t('settings.pageSizeDesc')} htmlFor="set-page">
+                  <Input
                     id="set-page"
                     name="pageSize"
                     type="text"
                     inputMode="numeric"
-                    className="input input-sm set-num"
+                    className="w-20 text-right tabular-nums"
                     value={settings.pageSize}
                     onChange={(e) => setPageSize(Math.min(200, Math.max(5, Number(e.target.value.replace(/\D/g, '')) || 0)))}
                     aria-label={t('settings.pageSize')}
@@ -185,31 +211,15 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
                     spellCheck={false}
                   />
                 </Row>
-                <Row title={t('tx.hideScam')} desc={t('settings.hideScamDesc')}>
-                  <button
-                    type="button"
-                    className="switch"
-                    role="switch"
-                    aria-checked={settings.hideScam}
-                    onClick={() => setHideScam(!settings.hideScam)}
-                    aria-label={t('tx.hideScam')}
-                    title={t('tx.hideScam')}
-                  />
+                <Row title={t('tx.hideScam')} desc={t('settings.hideScamDesc')} htmlFor="set-scam">
+                  <Switch id="set-scam" checked={settings.hideScam} onCheckedChange={(v) => setHideScam(v)} />
                 </Row>
               </Group>
 
               <Group title={t('settings.slip')} note={t('settings.slipNote')}>
                 {SLIP_FIELDS.map((f) => (
-                  <Row key={f} title={t(`slipField.${f}`)}>
-                    <button
-                      type="button"
-                      className="switch"
-                      role="switch"
-                      aria-checked={settings.slipShow[f]}
-                      onClick={() => setSlipShow(f, !settings.slipShow[f])}
-                      aria-label={t(`slipField.${f}`)}
-                      title={t(`slipField.${f}`)}
-                    />
+                  <Row key={f} title={t(`slipField.${f}`)} htmlFor={`set-slip-${f}`}>
+                    <Switch id={`set-slip-${f}`} checked={settings.slipShow[f]} onCheckedChange={(v) => setSlipShow(f, v)} />
                   </Row>
                 ))}
               </Group>
@@ -220,7 +230,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
             <>
               <Group title={t('account.data')} note={t('account.backupNote')}>
                 <Row title={t('account.export')} desc={t('account.dataWhere', { wallets: wallets.length, sources: settings.endpoints.length })}>
-                  <span className="inline">
+                  <div className="flex shrink-0 gap-2">
                     <Dropdown
                       size="sm"
                       value={exportMode}
@@ -231,14 +241,14 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
                         { value: 'encrypted' as const, label: t('account.exportEncrypted') },
                       ]}
                     />
-                    <button type="button" className="btn btn-sm btn-primary" onClick={handleExportClick}>
-                      <Icon name={exportMode === 'encrypted' ? 'lock' : 'download'} />
+                    <Button size="sm" onClick={handleExportClick}>
+                      {exportMode === 'encrypted' ? <LockIcon data-icon="inline-start" /> : <DownloadIcon data-icon="inline-start" />}
                       {t('account.export')}
-                    </button>
-                  </span>
+                    </Button>
+                  </div>
                 </Row>
                 <Row title={t('account.import')} desc={t('account.importMode')}>
-                  <span className="inline">
+                  <div className="flex shrink-0 gap-2">
                     <Dropdown
                       size="sm"
                       value={mode}
@@ -249,79 +259,55 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
                         { value: 'replace' as const, label: t('account.replace') },
                       ]}
                     />
-                    <label className="btn btn-sm">
-                      <Icon name="upload" />
+                    <Button size="sm" variant="outline" nativeButton={false} render={<label />}>
+                      <UploadIcon data-icon="inline-start" />
                       {t('account.import')}
                       <input
                         type="file"
                         accept="application/json,.json"
-                        className="file-hidden"
+                        className="sr-only"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
                           if (f) void handleFilePick(f);
                           e.target.value = '';
                         }}
                       />
-                    </label>
-                  </span>
+                    </Button>
+                  </div>
                 </Row>
               </Group>
-              {importErr && <span className="error">{importErr}</span>}
+              {importErr && (
+                <Alert variant="destructive">
+                  <AlertTitle>{importErr}</AlertTitle>
+                </Alert>
+              )}
             </>
           )}
         </DialogTabs>
-        <div className="dlg-actions">
-          <button type="button" className="btn" onClick={onClose}>
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={onClose}>
             {t('dialog.close')}
-          </button>
+          </Button>
         </div>
       </Dialog>
 
       {/* Dialog ใส่รหัสผ่านสำหรับ Export encrypted */}
       <Dialog open={encOpen} onClose={() => setEncOpen(false)} title={t('account.exportEncrypted')}>
-        <div className="set-rows">
-          <Row title={t('account.passphrase')}>
-            <input
-              className="input set-pass"
-              type="password"
-              value={encPass}
-              onChange={(e) => {
-                setEncPass(e.target.value);
-                setEncErr(null);
-              }}
-              autoComplete="new-password"
-              autoFocus
-              aria-label={t('account.passphrase')}
-              style={{ width: 240, height: 28, padding: '2px 8px', fontSize: 13 }}
-            />
-          </Row>
-          <Row title={t('account.passConfirm')}>
-            <input
-              className="input set-pass"
-              type="password"
-              value={encConfirm}
-              onChange={(e) => {
-                setEncConfirm(e.target.value);
-                setEncErr(null);
-              }}
-              autoComplete="new-password"
-              aria-label={t('account.passConfirm')}
-              style={{ width: 240, height: 28, padding: '2px 8px', fontSize: 13 }}
-            />
-          </Row>
-        </div>
-        {encErr && <span className="error">{encErr}</span>}
-        <p className="hint" style={{ marginTop: 6, marginBottom: 0, lineHeight: 1.35 }}>{t('account.passWarn')}</p>
-        <p className="hint" style={{ marginTop: 2, marginBottom: 0, lineHeight: 1.35 }}>{t('account.passHint')}</p>
-        <div className="dlg-actions" style={{ marginTop: 12 }}>
-          <button type="button" className="btn" onClick={() => setEncOpen(false)}>
-            {t('dialog.close')}
-          </button>
-          <button type="button" className="btn btn-primary" onClick={confirmEncrypt} disabled={encPass.length < 8 || encPass !== encConfirm}>
-            <Icon name="lock" />
-            {t('account.encrypt')}
-          </button>
-        </div>
+        <FieldGroup>
+          <PassField id="enc-pass" label={t('account.passphrase')} value={encPass} autoComplete="new-password" autoFocus onChange={(v) => { setEncPass(v); setEncErr(null); }} />
+          <PassField id="enc-confirm" label={t('account.passConfirm')} value={encConfirm} autoComplete="new-password" error={encErr} onChange={(v) => { setEncConfirm(v); setEncErr(null); }} onEnter={confirmEncrypt} />
+          <FieldDescription>{t('account.passWarn')}</FieldDescription>
+          <FieldDescription>{t('account.passHint')}</FieldDescription>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEncOpen(false)}>
+              {t('dialog.close')}
+            </Button>
+            <Button onClick={confirmEncrypt} disabled={encPass.length < 8 || encPass !== encConfirm}>
+              <LockIcon data-icon="inline-start" />
+              {t('account.encrypt')}
+            </Button>
+          </div>
+        </FieldGroup>
       </Dialog>
 
       {/* Dialog ใส่รหัสผ่านสำหรับ Import encrypted — เปิดอัตโนมัติเมื่อเจอไฟล์เข้ารหัส */}
@@ -335,46 +321,27 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
         }}
         title={t('account.decryptTitle')}
       >
-        <div className="set-rows">
-          <Row title={t('account.passphrase')}>
-            <input
-              className="input set-pass"
-              type="password"
-              value={decPass}
-              onChange={(e) => {
-                setDecPass(e.target.value);
+        <FieldGroup>
+          <PassField id="dec-pass" label={t('account.passphrase')} value={decPass} autoComplete="current-password" autoFocus error={decErr} onChange={(v) => { setDecPass(v); setDecErr(null); }} onEnter={() => void confirmDecrypt()} />
+          <FieldDescription>{t('account.decryptHint')}</FieldDescription>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDecOpen(false);
+                setPending(null);
+                setDecPass('');
                 setDecErr(null);
               }}
-              autoComplete="current-password"
-              autoFocus
-              aria-label={t('account.passphrase')}
-              style={{ width: 240, height: 28, padding: '2px 8px', fontSize: 13 }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') confirmDecrypt();
-              }}
-            />
-          </Row>
-        </div>
-        {decErr && <span className="error">{decErr}</span>}
-        <p className="hint" style={{ marginTop: 6, marginBottom: 0, lineHeight: 1.35 }}>{t('account.decryptHint')}</p>
-        <div className="dlg-actions" style={{ marginTop: 12 }}>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              setDecOpen(false);
-              setPending(null);
-              setDecPass('');
-              setDecErr(null);
-            }}
-          >
-            {t('dialog.cancel')}
-          </button>
-          <button type="button" className="btn btn-primary" onClick={confirmDecrypt} disabled={decPass.length < 8}>
-            <Icon name="lock" />
-            {t('account.decrypt')}
-          </button>
-        </div>
+            >
+              {t('dialog.cancel')}
+            </Button>
+            <Button onClick={() => void confirmDecrypt()} disabled={decPass.length < 8}>
+              <LockIcon data-icon="inline-start" />
+              {t('account.decrypt')}
+            </Button>
+          </div>
+        </FieldGroup>
       </Dialog>
     </>
   );

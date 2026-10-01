@@ -3,6 +3,9 @@ import { useI18n } from '../i18n';
 import { parseAddress, useStore } from '../store';
 import { Dialog } from './Dialog';
 import { useToast } from './Toast';
+import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 
 export function AddWalletDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
@@ -28,45 +31,35 @@ export function AddWalletDialog({ open, onClose }: { open: boolean; onClose: () 
   return (
     <Dialog open={open} onClose={onClose} title={t('add.title')}>
       <form onSubmit={submit}>
-        <div className="field">
-          <label className="label" htmlFor="add-label">
-            {t('add.label')}
-          </label>
-          <input id="add-label" name="label" className="input" value={label} onChange={(e) => setLabel(e.target.value)} autoComplete="off" maxLength={64} />
-        </div>
-        <div className="field">
-          <label className="label" htmlFor="add-address">
-            {t('add.address')}
-          </label>
-          <input
-            id="add-address"
-            name="address"
-            className="input mono"
-            value={address}
-            onChange={(e) => {
-              setAddress(e.target.value);
-              setErr(null);
-            }}
-            autoComplete="off"
-            spellCheck={false}
-            required
-            aria-invalid={err ? 'true' : undefined}
-            aria-describedby={err ? 'add-err' : undefined}
-          />
-          {err && (
-            <span id="add-err" className="error" aria-live="polite">
-              {err}
-            </span>
-          )}
-        </div>
-        <div className="dlg-actions">
-          <button type="button" className="btn" onClick={onClose}>
-            {t('dialog.cancel')}
-          </button>
-          <button type="submit" className="btn btn-primary">
-            {t('add.submit')}
-          </button>
-        </div>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="add-label">{t('add.label')}</FieldLabel>
+            <Input id="add-label" name="label" value={label} onChange={(e) => setLabel(e.target.value)} autoComplete="off" maxLength={64} />
+          </Field>
+          <Field data-invalid={err ? true : undefined}>
+            <FieldLabel htmlFor="add-address">{t('add.address')}</FieldLabel>
+            <Input
+              id="add-address"
+              name="address"
+              value={address}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                setErr(null);
+              }}
+              autoComplete="off"
+              spellCheck={false}
+              required
+              aria-invalid={err ? true : undefined}
+            />
+            {err && <FieldError aria-live="polite">{err}</FieldError>}
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t('dialog.cancel')}
+            </Button>
+            <Button type="submit">{t('add.submit')}</Button>
+          </div>
+        </FieldGroup>
       </form>
     </Dialog>
   );

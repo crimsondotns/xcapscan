@@ -1,8 +1,7 @@
-/**
- * ไดอะล็อกแบบมีแถบหัวข้อด้านซ้าย (จอแคบ = แถบเลื่อนแนวนอนด้านบน)
- * ปุ่มหัวข้อเป็น role="tab" จริง ลูกศรขึ้น/ลง (หรือซ้าย/ขวาตอนแนวนอน) เลื่อนหัวข้อได้ตามมาตรฐาน
- */
-import { useRef, type ReactNode } from 'react';
+/** แท็บในไดอะล็อก — shadcn Tabs (Base UI): แนวนอนบนมือถือ แนวตั้งด้านซ้ายบนจอกว้าง; คีย์บอร์ด/aria มาจาก Base UI */
+import type { ReactNode } from 'react';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Icon, type IconName } from './Icon';
 
 export interface TabDef<T extends string> {
@@ -12,44 +11,20 @@ export interface TabDef<T extends string> {
 }
 
 export function DialogTabs<T extends string>({ tabs, active, onChange, label, children }: { tabs: Array<TabDef<T>>; active: T; onChange: (id: T) => void; label: string; children: ReactNode }) {
-  const rail = useRef<HTMLDivElement>(null);
-  const move = (dir: 1 | -1) => {
-    const i = tabs.findIndex((x) => x.id === active);
-    const next = tabs[(i + dir + tabs.length) % tabs.length]!;
-    onChange(next.id);
-    rail.current?.querySelector<HTMLButtonElement>(`[data-tab="${next.id}"]`)?.focus();
-  };
+  const mobile = useIsMobile();
   return (
-    <div className="dlg-tabs">
-      <div ref={rail} className="dlg-rail" role="tablist" aria-orientation="vertical" aria-label={label}>
+    <Tabs value={active} onValueChange={(v) => onChange(v as T)} orientation={mobile ? 'horizontal' : 'vertical'} className="gap-6">
+      <TabsList aria-label={label} className={mobile ? 'w-full' : 'w-44 shrink-0 self-start'}>
         {tabs.map((tb) => (
-          <button
-            key={tb.id}
-            type="button"
-            role="tab"
-            data-tab={tb.id}
-            className="tab-item"
-            aria-selected={tb.id === active}
-            tabIndex={tb.id === active ? 0 : -1}
-            onClick={() => onChange(tb.id)}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-                e.preventDefault();
-                move(1);
-              } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-                e.preventDefault();
-                move(-1);
-              }
-            }}
-          >
-            <Icon name={tb.icon} />
-            <span className="tab-label">{tb.label}</span>
-          </button>
+          <TabsTrigger key={tb.id} value={tb.id}>
+            <Icon name={tb.icon} data-icon="inline-start" />
+            {tb.label}
+          </TabsTrigger>
         ))}
-      </div>
-      <div className="dlg-panel" role="tabpanel" aria-label={tabs.find((x) => x.id === active)?.label ?? label}>
+      </TabsList>
+      <TabsContent value={active} className="flex min-w-0 flex-col gap-6">
         {children}
-      </div>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

@@ -8,7 +8,11 @@ import { useI18n } from '../i18n';
 import { cleanTags, useStore, type Wallet } from '../store';
 import { tagsOf } from '../groups';
 import { Dialog } from './Dialog';
-import { Icon } from './Icon';
+import { PlusIcon, XIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 
 const MAX_LEN = 32;
 
@@ -36,58 +40,58 @@ export function TagDialog({ open, wallet, onClose }: { open: boolean; wallet: Wa
 
   return (
     <Dialog open={open} onClose={onClose} title={t('tags.title', { label: wallet.label })}>
-      <div className="stack-tight">
-        <div className="field">
-          <span className="label">{t('tags.current')}</span>
+      <FieldGroup>
+        <Field>
+          <FieldLabel>{t('tags.current')}</FieldLabel>
           {tags.length === 0 ? (
-            <p className="hint">{t('wallets.noTag')}</p>
+            <FieldDescription>{t('wallets.noTag')}</FieldDescription>
           ) : (
-            <div className="tag-list">
+            <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
-                <span key={tag} className="tag tag-removable">
+                <Badge key={tag} variant="secondary" className="h-7 gap-1 pr-1 pl-2.5">
                   {tag}
-                  <button type="button" className="tag-x" onClick={() => set(tags.filter((x) => x !== tag))} aria-label={t('tags.remove', { tag })} title={t('tags.remove', { tag })}>
-                    <Icon name="x" />
-                  </button>
-                </span>
+                  <Button variant="ghost" size="icon-xs" onClick={() => set(tags.filter((x) => x !== tag))} aria-label={t('tags.remove', { tag })} title={t('tags.remove', { tag })}>
+                    <XIcon />
+                  </Button>
+                </Badge>
               ))}
             </div>
           )}
-        </div>
+        </Field>
 
-        <form className="field" onSubmit={add}>
-          <label className="label" htmlFor="tag-new">
-            {t('tags.add')}
-          </label>
-          <div className="inline">
-            <input id="tag-new" name="tag" className="input" value={draft} placeholder={t('tags.placeholder')} onChange={(e) => setDraft(e.target.value)} autoComplete="off" maxLength={MAX_LEN} />
-            <button type="submit" className="btn" disabled={draft.trim() === '' || tags.includes(draft.trim())}>
-              <Icon name="plus" />
-              {t('tags.addBtn')}
-            </button>
-          </div>
-          <span className="hint">{t('wallets.tagHint')}</span>
+        <form onSubmit={add}>
+          <Field>
+            <FieldLabel htmlFor="tag-new">{t('tags.add')}</FieldLabel>
+            <div className="flex gap-2">
+              <Input id="tag-new" name="tag" value={draft} placeholder={t('tags.placeholder')} onChange={(e) => setDraft(e.target.value)} autoComplete="off" maxLength={MAX_LEN} />
+              <Button type="submit" variant="outline" disabled={draft.trim() === '' || tags.includes(draft.trim())}>
+                <PlusIcon data-icon="inline-start" />
+                {t('tags.addBtn')}
+              </Button>
+            </div>
+            <FieldDescription>{t('wallets.tagHint')}</FieldDescription>
+          </Field>
         </form>
 
         {known.length > 0 && (
-          <div className="field">
-            <span className="label">{t('tags.known')}</span>
-            <div className="tag-list">
+          <Field>
+            <FieldLabel>{t('tags.known')}</FieldLabel>
+            <div className="flex flex-wrap gap-2">
               {known.map((tag) => (
-                <button key={tag} type="button" className="tag tag-pick" onClick={() => set([...tags, tag])}>
-                  <Icon name="plus" />
+                <Button key={tag} type="button" variant="outline" size="sm" onClick={() => set([...tags, tag])}>
+                  <PlusIcon data-icon="inline-start" />
                   {tag}
-                </button>
+                </Button>
               ))}
             </div>
-          </div>
+          </Field>
         )}
-      </div>
+      </FieldGroup>
 
-      <div className="dlg-actions">
-        <button type="button" className="btn" onClick={onClose}>
+      <div className="flex justify-end">
+        <Button type="button" variant="outline" onClick={onClose}>
           {t('dialog.close')}
-        </button>
+        </Button>
       </div>
     </Dialog>
   );
