@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useInfinite } from '../useInfinite';
 import { useStickyHead } from '../useStickyHead';
 import { MoreSentinel } from './MoreSentinel';
@@ -18,7 +18,8 @@ import { Field, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { SearchIcon } from 'lucide-react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { ADV_EMPTY, AdvancedFilterButton, AdvancedFilterChips, advMatches, type AdvFilter } from './AdvancedFilter';
+import { ADV_EMPTY, AdvancedFilterButton, AdvancedFilterChips, advFromTs, advMatches, type AdvFilter } from './AdvancedFilter';
+import { Spinner } from '@/components/ui/spinner';
 
 const TYPES: TxType[] = ['swap', 'send', 'receive', 'approve', 'contract'];
 /** ตัวกรองชนิด: 'transfer' = โอน นับทั้งส่งและรับในอันเดียว ('' = ทุกประเภท) */
@@ -123,7 +124,31 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
       return c * dir || b.time - a.time;
     });
   }, [rows, q, wallet, chain, type, sort, labels, hideScam, adv]);
-  const inf = useInfinite({ total: filtered.length, page: PAGE, hasMore, loading, fetchMore: onMore, resetKey: `${wallet}|${q}|${chain}|${type}|${sort.key}${sort.dir}|${JSON.stringify(adv)}` });
+  /*
+   * กรองวันที่ → ดึงประวัติจากแหล่งข้อมูลย้อนหลังเองจนถึงวันเริ่มของช่วง (แหล่งข้อมูลไม่มีพารามิเตอร์วันที่ — เลื่อนหน้าด้วย offset/cursor)
+   * ครอบคลุมแล้ว (แถวเก่าสุด ≤ วันเริ่ม) หรือหมดหน้า → หยุด; ไม่เลื่อนหน้าเกินช่วงต่อจากตัวเลื่อนไม่รู้จบด้วย
+   * จำกัดรอบละ MAX_PAGES หน้า (กัน rate limit) แล้วให้ผู้ใช้กดโหลดต่อเอง; กดหยุดได้
+   */
+  const fromTs = advFromTs(adv);
+  const oldest = useMemo(() => rows.reduce((m, r) => (wallet && r.walletId !== wallet ? m : Math.min(m, r.time)), Number.POSITIVE_INFINITY), [rows, wallet]);
+  const covered = fromTs !== null && oldest <= fromTs;
+  const MAX_PAGES = 20;
+  const [auto, setAuto] = useState<{ key: string; pages: number; stopped: boolean }>({ key: '', pages: 0, stopped: false });
+  const advKey = fromTs === null ? '' : `${wallet}|${fromTs}`;
+  const run = auto.key === advKey ? auto : { key: advKey, pages: 0, stopped: false };
+  const fetching = fromTs !== null && !!onMore && hasMore && !covered && !run.stopped && run.pages < MAX_PAGES;
+  const lastRows = useRef(-1);
+  useEffect(() => {
+    if (!fetching || loading || lastRows.current === rows.length) return;
+    lastRows.current = rows.length;
+    setAuto({ ...run, pages: run.pages + 1 });
+    onMore?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetching, loading, rows.length]);
+  const capped = fromTs !== null && !!onMore && hasMore && !covered && !run.stopped && run.pages >= MAX_PAGES;
+  const fromLabel = fromTs === null ? '' : new Date(fromTs * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const inf = useInfinite({ total: filtered.length, page: PAGE, hasMore: hasMore && !covered, loading, fetchMore: onMore, resetKey: `${wallet}|${q}|${chain}|${type}|${sort.key}${sort.dir}|${JSON.stringify(adv)}` });
   const shown = filtered.slice(0, inf.visible);
 
   function toggleSort(key: SortKey) {
@@ -186,6 +211,33 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
         </span>
       </div>
       <AdvancedFilterChips value={adv} onChange={setAdv} />
+      {(fetching || capped) && (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
+          {fetching ? (
+            <>
+              <Spinner />
+              {t('af.fetching', { date: fromLabel })}
+              <Button variant="link" size="sm" onClick={() => setAuto({ ...run, stopped: true })}>
+                {t('af.stop')}
+              </Button>
+            </>
+          ) : (
+            <>
+              {t('af.capped', { date: fromLabel })}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  lastRows.current = -1;
+                  setAuto({ ...run, pages: 0 });
+                }}
+              >
+                {t('af.continue')}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {filtered.length === 0 && !loading ? (
         <div className="empty">

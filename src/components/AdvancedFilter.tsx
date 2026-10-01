@@ -46,6 +46,13 @@ const num = (s: string) => {
 };
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000;
 
+/** วันเริ่มของช่วงที่กรอง (วินาที) — ใช้บอกว่าต้องดึงประวัติย้อนหลังถึงไหน; null = ไม่ได้กรองวันที่ */
+export function advFromTs(f: AdvFilter, now = Date.now() / 1000): number | null {
+  if (f.date === 'custom') return f.from ? startOfDay(f.from) : null;
+  if (f.date === 'all') return null;
+  return now - PRESET_SEC[f.date];
+}
+
 /** แถวผ่านตัวกรองขั้นสูงไหม — time ของแถวเป็นวินาที */
 export function advMatches(r: TxRow, f: AdvFilter, now = Date.now() / 1000): boolean {
   const real = r.moves.filter((m) => m.amount !== 0 && !m.approve);
