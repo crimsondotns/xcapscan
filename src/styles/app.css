@@ -1148,13 +1148,16 @@ input[type='file'].input::file-selector-button {
     margin-left: 0;
     flex-basis: 100%;
   }
-  /* ตาราง: ซ่อนคอลัมน์รอง เลื่อนแนวนอนในกรอบเอง */
+  /* ตาราง: ครบ 4 คอลัมน์ (สเปกผู้ใช้ 2026-10-01) เลื่อนแนวนอนในกรอบเอง — คอลัมน์ Type ติดซ้ายตอนเลื่อน */
   .tx {
-    min-width: 520px;
+    min-width: 600px;
   }
-  .tx th:nth-child(4),
-.tx td:nth-child(4) {
-    display: none;
+  .tx th:first-child,
+  .tx td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--color-bg);
   }
   .drawer {
     width: 100vw;

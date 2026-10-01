@@ -18,7 +18,7 @@ Stack (migrated 2026-10-01): Tailwind 4 + shadcn `base-nova` on Base UI (`compon
 
 ## Responsive (user spec, 2026-09-21)
 
-Breakpoints: mobile < 640, tablet 640–1024, desktop > 1024. Tokens in `tokens.css` switch per breakpoint: body 14px below 1024 / 16px above; section spacing 12 / 16 / 24; controls 48px / 40px / 40px. Mobile: single column, full-width inputs, Network fee column hidden, table scrolls inside its card, dialogs are full-width bottom sheets, detail panel full-screen. Tablet: wallets panel collapsible via the header toggle, panel 80% width. Desktop: sticky wallets panel, all columns. `html, body { overflow-x: clip }` (never `hidden` — that makes body a scroll container and breaks every sticky element) — nothing may scroll the page sideways. Table header sticks under the 64px site header on wide screens; below 1024px the table scrolls inside its wrapper instead.
+Breakpoints: mobile < 640, tablet 640–1024, desktop > 1024. Tokens in `tokens.css` switch per breakpoint: body 14px below 1024 / 16px above; section spacing 12 / 16 / 24; controls 48px / 40px / 40px. Mobile: single column, full-width inputs, transaction table keeps all 4 columns and scrolls sideways inside its card with the Type column pinned left (user, 2026-10-01), dialogs are full-width bottom sheets, detail panel full-screen. Tablet: wallets panel collapsible via the header toggle, panel 80% width. Desktop: sticky wallets panel, all columns. `html, body { overflow-x: clip }` (never `hidden` — that makes body a scroll container and breaks every sticky element) — nothing may scroll the page sideways. Table header sticks under the 64px site header on wide screens; below 1024px the table scrolls inside its wrapper instead.
 
 ## Transaction table (user spec, 2026-09-21)
 

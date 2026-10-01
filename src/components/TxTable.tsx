@@ -6,7 +6,7 @@ import { SkeletonRows } from './Skeleton';
 import { useI18n } from '../i18n';
 import { useStore, type Wallet } from '../store';
 import type { TxRow, TxType } from '../feed';
-import { formatAmount, formatFeeNative, formatFeeUsd, formatRelative } from '../format';
+import { formatAmount, formatFeeNative, formatFeeUsd, formatRelative, shortHash } from '../format';
 import { Icon } from './Icon';
 import { protocolKind } from '../kind';
 import { Dropdown } from './Dropdown';
@@ -406,6 +406,19 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                       <span className="fee">
                         <span>{formatFeeUsd(r.gasUsd)}</span>
                         {r.gasNative !== null && <span className="amt-out">{formatFeeNative(r.gasNative, native)}</span>}
+                        {(() => {
+                          // hash สั้น → explorer ของเชน (chain list / Custom chains); ไม่มี explorer = ข้อความเฉยๆ
+                          const host = chainOf(chainInfo, r.chain)?.explorer?.replace(/\/+$/, '').replace(/\/tx$/i, '');
+                          return host ? (
+                            <a className="amt-out hover:text-foreground hover:underline" href={`${host}/tx/${r.hash}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title={r.hash}>
+                              {shortHash(r.hash)}
+                            </a>
+                          ) : (
+                            <span className="amt-out" title={r.hash}>
+                              {shortHash(r.hash)}
+                            </span>
+                          );
+                        })()}
                       </span>
                     </TableCell>
                   </TableRow>
