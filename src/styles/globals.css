@@ -32,6 +32,7 @@
   --color-positive: var(--positive);
   --color-warning: var(--warning);
   --color-border: var(--border);
+  --color-lightbox: var(--lightbox);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);

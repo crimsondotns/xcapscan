@@ -14,7 +14,7 @@ import { slipData, type SlipData } from '../slip';
 import { SlipLightbox } from './SlipView';
 import { protocolKind } from '../kind';
 import { riskReasons } from '../risk';
-import { CheckIcon, ChevronUpIcon, ExternalLinkIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
+import { CheckIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Badge } from '@/components/ui/badge';
@@ -31,19 +31,23 @@ export function DetailPanel(props: PanelProps) {
   const [last, setLast] = useState<TxRow | null>(props.row);
   if (props.row && props.row !== last) setLast(props.row);
   const row = props.row ?? last;
+  /* สลิป: กดปุ่ม Slip → lightbox ทับทุกอย่าง — อยู่ "ข้าง" Sheet ไม่ใช่ข้างใน (ถ้าซ้อนใน Base UI จะถือเป็นไดอะล็อกลูก
+     ม่านของ Sheet จะอยู่บนสุด คลิกนอกภาพเลยไม่ปิดสลิป); เปลี่ยนแถว/ปิดแผงแล้วรีเซ็ต */
+  const [slip, setSlip] = useState<SlipData | null>(null);
+  useEffect(() => setSlip(null), [props.row]);
   return (
-    <Sheet open={props.row !== null} onOpenChange={(o) => !o && props.onClose()}>
-      <SheetContent side={mobile ? 'bottom' : 'right'} className={cn('gap-0', mobile ? 'h-dvh' : 'w-full sm:max-w-[440px]')}>
-        {row && <DetailBody {...props} row={row} />}
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={props.row !== null} onOpenChange={(o) => !o && props.onClose()}>
+        <SheetContent side={mobile ? 'bottom' : 'right'} className={cn('gap-0', mobile ? 'h-dvh' : 'w-full sm:max-w-[440px]')}>
+          {row && <DetailBody {...props} row={row} onSlip={setSlip} />}
+        </SheetContent>
+      </Sheet>
+      <SlipLightbox data={slip} onClose={() => setSlip(null)} />
+    </>
   );
 }
 
-function DetailBody({ row, wallets, chains, settings }: PanelProps & { row: TxRow }) {
-  /* สลิป: กดปุ่ม Slip → เปิดภาพสลิปแบบ lightbox ทับทุกอย่าง (ไม่ใช่ไดอะล็อก) — เปลี่ยนแถว/ปิดแผงแล้วรีเซ็ต */
-  const [slip, setSlip] = useState<SlipData | null>(null);
-  useEffect(() => setSlip(null), [row]);
+function DetailBody({ row, wallets, chains, settings, onSlip: setSlip }: PanelProps & { row: TxRow; onSlip: (d: SlipData) => void }) {
   const { t } = useI18n();
   const { toast } = useToast();
   /* คลิกตัวเลข → คัดลอกค่าเต็มความละเอียด (ไม่ใช่ที่แสดง) */
@@ -303,7 +307,6 @@ function DetailBody({ row, wallets, chains, settings }: PanelProps & { row: TxRo
           ]}
         />
       </SheetFooter>
-      <SlipLightbox data={slip} onClose={() => setSlip(null)} />
     </>
   );
 }
@@ -322,7 +325,6 @@ function ViewMenu({ label, items }: { label: string; items: ViewItem[] }) {
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button size="lg" className="w-full" />}>
         {label}
-        <ChevronUpIcon data-icon="inline-end" />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="center" className="w-(--anchor-width)">
         <DropdownMenuGroup>
@@ -330,7 +332,6 @@ function ViewMenu({ label, items }: { label: string; items: ViewItem[] }) {
             it.href ? (
               <DropdownMenuItem key={it.key} render={<a href={it.href} target="_blank" rel="noopener noreferrer" />}>
                 {it.label}
-                <ExternalLinkIcon className="ml-auto" />
               </DropdownMenuItem>
             ) : (
               <DropdownMenuItem key={it.key} disabled={it.disabled} onClick={() => it.onSelect?.()}>

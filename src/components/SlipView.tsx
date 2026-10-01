@@ -127,9 +127,12 @@ export function SlipLightbox({ data, onClose }: { data: SlipData | null; onClose
   const img = useSlipImage(rec);
   return (
     <Dialog open={data !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-auto max-w-[min(360px,calc(100vw-2rem))] bg-transparent p-0 shadow-none ring-0 sm:max-w-[360px]">
+      <DialogContent showCloseButton={false} overlayClassName="bg-lightbox supports-backdrop-filter:backdrop-blur-none" className="w-auto max-w-[min(360px,calc(100vw-2rem))] bg-transparent p-0 shadow-none ring-0 sm:max-w-[360px]">
         <DialogTitle className="sr-only">{t('slip.title')}</DialogTitle>
-        <div className="grid min-h-60 place-items-center">{img ? <SlipPicture img={img} alt={t('slip.title')} className="lightbox-img" /> : <Spinner className="size-6 text-primary-foreground" />}</div>
+        {/* คลิกพื้นที่โปร่งรอบภาพ (ไม่ใช่ตัวสลิป) = ปิด เหมือนคลิกม่าน */}
+        <div className="grid min-h-60 place-items-center" onClick={(e) => e.target === e.currentTarget && onClose()}>
+          {img ? <SlipPicture img={img} alt={t('slip.title')} className="lightbox-img" /> : <Spinner className="size-6 text-primary-foreground" />}
+        </div>
       </DialogContent>
     </Dialog>
   );

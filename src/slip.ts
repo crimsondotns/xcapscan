@@ -706,10 +706,15 @@ export async function renderSlip(rec: SlipRecord, L: Labels, action: SlipAction 
   const probe = document.createElement('canvas').getContext('2d')!;
   const H = Math.ceil(draw(probe, true)) + SCALLOP_R;
   const canvas = document.createElement('canvas');
-  canvas.width = W * 2;
-  canvas.height = H * 2;
+  /* ความละเอียดพิกเซล: lightbox แสดงกว้าง 360 CSS px (W = 320 ตรรกะ) — ต้องมีพิกเซลจริง ≥ 360 × devicePixelRatio
+     ไม่งั้นเบราว์เซอร์ขยายภาพจนเบลอ (เดิม 2× = 640px < 720px บนจอ Retina); อย่างน้อย 3× สำหรับไฟล์ที่เซฟ/แชร์ */
+  const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
+  const S = Math.min(4, Math.max(3, Math.ceil((dpr * 360) / W)));
+  canvas.width = W * S;
+  canvas.height = H * S;
   const ctx = canvas.getContext('2d')!;
-  ctx.scale(2, 2);
+  ctx.scale(S, S);
+  ctx.imageSmoothingQuality = 'high';
   // กระดาษขาว ขอบล่างหยัก (ครึ่งวงกลมเว้า) — นอกนั้นโปร่งใส
   ctx.save();
   ctx.beginPath();
