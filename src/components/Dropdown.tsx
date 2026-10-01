@@ -32,11 +32,12 @@ export function Dropdown<V extends string>({ value, options, onChange, label, di
       <SelectTrigger size={size === 'sm' ? 'sm' : 'default'} aria-label={label} className={cn('min-w-0', className)}>
         <SelectValue>{() => display ?? current?.label}</SelectValue>
       </SelectTrigger>
-      <SelectContent align={align === 'right' ? 'end' : 'start'} alignItemWithTrigger={false}>
+      {/* รายการกว้างตามชื่อที่ยาวที่สุด (ไม่ล็อกเท่าปุ่ม) แต่ไม่เกินจอ — ชื่อยาวเกินจอจึงตัด … */}
+      <SelectContent align={align === 'right' ? 'end' : 'start'} alignItemWithTrigger={false} className="w-auto min-w-(--anchor-width) max-w-[min(28rem,calc(100vw-2rem))]">
         <SelectGroup>
           {options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
+            <SelectItem key={o.value} value={o.value} title={typeof o.label === 'string' ? o.label : undefined}>
+              <span className="min-w-0 flex-1 truncate">{o.label}</span>
               {o.meta != null && <span className="ml-auto text-muted-foreground tabular-nums">{o.meta}</span>}
             </SelectItem>
           ))}

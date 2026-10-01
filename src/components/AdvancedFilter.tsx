@@ -230,8 +230,9 @@ function TokenSelect({ options, value, onChange }: { options: Array<{ symbol: st
                 const on = value.includes(o.symbol);
                 return (
                   <CommandItem key={o.symbol} value={o.symbol} data-checked={on} onSelect={() => onChange(on ? value.filter((x) => x !== o.symbol) : [...value, o.symbol])}>
-                    {o.symbol}
-                    <span className="ml-auto pr-5 text-muted-foreground tabular-nums">{o.count}</span>
+                    {/* ชื่อกินที่ที่เหลือ (ชิด start) — ตัวเลขชิด end ก่อนเครื่องหมายถูก; ห้ามใช้ ml-auto คู่กับ CheckIcon ที่ ml-auto อยู่แล้ว (จะแบ่งที่ว่างกันจนเลขลอยกลาง) */}
+                    <span className="min-w-0 flex-1 truncate">{o.symbol}</span>
+                    <span className="text-muted-foreground tabular-nums">{o.count}</span>
                   </CommandItem>
                 );
               })}
