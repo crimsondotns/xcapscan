@@ -77,3 +77,16 @@ th.num > [data-slot='button'] {
     position: static;
   }
 }
+
+/* ไม่แสดงแถบเลื่อนที่ไหนเลย (สเปกผู้ใช้ 2026-10-01) — ยังเลื่อนได้ตามปกติด้วยล้อ/ทัชแพด/นิ้ว/คีย์บอร์ด */
+*,
+*::before,
+*::after {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+[data-slot='scroll-area-scrollbar'] {
+  display: none;
+}

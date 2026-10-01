@@ -23,7 +23,7 @@ export function DialogTabs<T extends string>({ tabs, active, onChange, label, ch
           </TabsTrigger>
         ))}
       </TabsList>
-      <TabsContent value={active} className="flex h-[min(560px,60dvh)] max-sm:h-auto max-sm:min-h-0 max-sm:flex-1 min-w-0 flex-col gap-6 overflow-y-auto overscroll-contain pr-1">
+      <TabsContent value={active} className="flex h-[min(560px,60dvh)] max-sm:h-auto max-sm:min-h-0 max-sm:flex-1 min-w-0 flex-col gap-6 overflow-y-auto overscroll-contain">
         {children}
       </TabsContent>
     </Tabs>
