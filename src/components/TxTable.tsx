@@ -18,6 +18,7 @@ import { Field, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { SearchIcon } from 'lucide-react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { ADV_EMPTY, AdvancedFilterButton, AdvancedFilterChips, advMatches, type AdvFilter } from './AdvancedFilter';
 
 const TYPES: TxType[] = ['swap', 'send', 'receive', 'approve', 'contract'];
 /** ตัวกรองชนิด: 'transfer' = โอน นับทั้งส่งและรับในอันเดียว ('' = ทุกประเภท) */
@@ -65,6 +66,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   const [q, setQ] = useState('');
   const [chain, setChain] = useState('');
   const [type, setType] = useState<TypeFilter>('');
+  const [adv, setAdv] = useState<AdvFilter>(ADV_EMPTY);
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
 
   const labels = useMemo(() => new Map(wallets.map((w) => [w.id, w.label])), [wallets]);
@@ -75,9 +77,23 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
 
   const PAGE = 25;
   const head = useStickyHead();
+  /* ตัวกรองแถบเครื่องมือ (ไม่รวม advanced) — ใช้ทั้งกรองจริงและนับ "Show N results" ใน draft */
+  const base = (r: TxRow, needle: string) => {
+    if (wallet && r.walletId !== wallet) return false;
+    if (chain && r.chain !== chain) return false;
+    if (!matchesType(r, type)) return false;
+    if (hideScam && r.flagged) return false;
+    if (!needle) return true;
+    return r.hash.toLowerCase().includes(needle) || (r.counterparty ?? '').toLowerCase().includes(needle) || (r.counterpartyName ?? '').toLowerCase().includes(needle) || r.name.toLowerCase().includes(needle) || r.moves.some((m) => m.symbol.toLowerCase().includes(needle));
+  };
+  const countFor = (f: AdvFilter) => {
+    const needle = q.trim().toLowerCase();
+    return rows.filter((r) => base(r, needle) && advMatches(r, f)).length;
+  };
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = rows.filter((r) => {
+      if (!advMatches(r, adv)) return false;
       if (wallet && r.walletId !== wallet) return false;
       if (chain && r.chain !== chain) return false;
       if (!matchesType(r, type)) return false;
@@ -106,8 +122,8 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
       const c = typeof ka === 'number' && typeof kb === 'number' ? ka - kb : String(ka).localeCompare(String(kb));
       return c * dir || b.time - a.time;
     });
-  }, [rows, q, wallet, chain, type, sort, labels, hideScam]);
-  const inf = useInfinite({ total: filtered.length, page: PAGE, hasMore, loading, fetchMore: onMore, resetKey: `${wallet}|${q}|${chain}|${type}|${sort.key}${sort.dir}` });
+  }, [rows, q, wallet, chain, type, sort, labels, hideScam, adv]);
+  const inf = useInfinite({ total: filtered.length, page: PAGE, hasMore, loading, fetchMore: onMore, resetKey: `${wallet}|${q}|${chain}|${type}|${sort.key}${sort.dir}|${JSON.stringify(adv)}` });
   const shown = filtered.slice(0, inf.visible);
 
   function toggleSort(key: SortKey) {
@@ -158,6 +174,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
           ]}
         />
         <Dropdown value={type} onChange={setType} label={t('tx.col.type')} options={[{ value: '' as TypeFilter, label: t('tx.allTypes'), meta: scope.length }, { value: 'transfer' as TypeFilter, label: t('tx.typeTransfer'), meta: countType('transfer') }, ...TYPES.map((k) => ({ value: k as TypeFilter, label: t(`tx.type.${k}`), meta: countType(k) }))]} />
+        <AdvancedFilterButton value={adv} onChange={setAdv} rows={scope} countFor={countFor} />
         <Field orientation="horizontal" className="w-auto">
           <Switch id="tx-hide-scam" checked={hideScam} onCheckedChange={(v) => setHideScam(v)} />
           <FieldLabel htmlFor="tx-hide-scam" className="font-normal">
@@ -168,6 +185,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
           {t('tx.count', { n: filtered.length })}
         </span>
       </div>
+      <AdvancedFilterChips value={adv} onChange={setAdv} />
 
       {filtered.length === 0 && !loading ? (
         <div className="empty">
