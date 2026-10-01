@@ -60,6 +60,20 @@ function pageCacheSet(key: string, page: Page): void {
   pageCache.set(key, { page, exp: Date.now() + PAGE_CACHE_TTL_MS });
 }
 
+/** ตัวเลือกตอนโหลดหน้าที่เก่ากว่า (ใช้โดยตัวกรองวันที่ที่ดึงย้อนหลังเอง) */
+export interface OlderOpts {
+  /** จำนวนแถวต่อหน้า (แทน settings.pageSize) — แหล่ง sol รับหน้าใหญ่ได้ ลดจำนวนคำขอ */
+  count?: number;
+  /** กระโดดไปที่เวลานี้ (วินาที) เลย สำหรับแหล่งที่เลื่อนหน้าด้วย {start} — ข้ามหน้าที่ใหม่กว่าช่วงที่กรองทั้งหมด */
+  seek?: number;
+  /** ขอ metadata โทเคนด้วยไหม (ค่าเริ่ม true) — ปิดตอนไล่หน้าย้อนหลังเพื่อไม่ให้คำขอเพิ่มเป็นสองเท่า */
+  meta?: boolean;
+}
+/** แหล่งนี้เลื่อนหน้าด้วยเวลา ({start}) ไหม — erc20 ที่ไม่มี placeholder แอปประกอบ start_time={start} ให้ */
+export const seeksByTime = (ep: Endpoint) => ep.url.includes('{start}') || (ep.family === 'erc20' && !ep.url.includes('{'));
+/** จำนวนแถวต่อหน้าที่ใช้ตอนไล่ย้อนหลัง ต่อตระกูล — erc20 (history_list) จำกัด 20 */
+export const bulkCount = (family: Endpoint['family'], pageSize: number) => (family === 'sol' ? Math.max(pageSize, 100) : pageSize);
+
 export function endpointsFor(w: Wallet, settings: Settings): Endpoint[] {
   return settings.endpoints.filter((e) => e.enabled && e.family === w.family);
 }
@@ -100,7 +114,7 @@ export function useFeed(settings: Settings) {
   );
 
   const load = useCallback(
-    async (w: Wallet, mode: 'reset' | 'older') => {
+    async (w: Wallet, mode: 'reset' | 'older', opts: OlderOpts = {}) => {
       const eps = endpointsFor(w, settings);
       if (!eps.length || inflight.current.has(w.id)) return;
       inflight.current.add(w.id);
@@ -109,26 +123,33 @@ export function useFeed(settings: Settings) {
 
       const results = await Promise.all(
         eps.map(async (ep) => {
-          const c = mode === 'older' ? cur.next[ep.id] : null;
-          if (mode === 'older' && c === null) return { ep, page: null, error: null };
+          const prevCur = mode === 'older' ? cur.next[ep.id] : null;
+          // กระโดดตามเวลา: ใช้เฉพาะเมื่อ seek เก่ากว่าตำแหน่งปัจจุบัน (ไม่ย้อนกลับไปหน้าที่ใหม่กว่า)
+          const c: Cursor | null | undefined =
+            opts.seek !== undefined && prevCur !== null && seeksByTime(ep) && (!prevCur || prevCur.start > opts.seek) ? { start: opts.seek, cursor: '', offset: prevCur?.offset ?? 0 } : prevCur;
+          if (mode === 'older' && c === null) return { ep, page: null, error: null, count: 0 };
+          const count = opts.count ?? settings.pageSize;
 
           // ตรวจแคชก่อนยิงจริง — เปิดกระเป๋าเดิม/หน้าเดิมซ้ำใน 5 นาทีใช้ของเดิม
-          const ck = `${ep.url}|${w.address.toLowerCase()}|${c?.next ?? c?.start ?? 'first'}|${settings.pageSize}`;
+          const ck = `${ep.url}|${w.address.toLowerCase()}|${c?.next ?? c?.start ?? 'first'}|${count}`;
           const cached = pageCacheGet(ck);
-          if (cached) return { ep, page: cached, error: null };
+          if (cached) return { ep, page: cached, error: null, count };
 
           try {
-            const page = await fetchPage(ep.url, w.id, w.address, c ?? null, settings.pageSize, { family: ep.family, authHeader: ep.authHeader, apiKey: ep.apiKey });
+            const page = await fetchPage(ep.url, w.id, w.address, c ?? null, count, { family: ep.family, authHeader: ep.authHeader, apiKey: ep.apiKey });
             // แหล่งที่ตั้ง URL metadata ไว้ → เติมชื่อ/สัญลักษณ์/โลโก้ของโทเคนที่ยังไม่รู้ก่อนแสดง
-            const ids = ep.metaUrl ? unknownTokens(page.rows) : [];
+            const ids = ep.metaUrl && opts.meta !== false ? unknownTokens(page.rows) : [];
             const finalPage = (ids.length ? { ...page, rows: applyTokenMeta(page.rows, await ensureTokenMeta(ep, ids)) } : page) as Page;
             pageCacheSet(ck, finalPage);
-            return { ep, page: finalPage, error: null };
+            return { ep, page: finalPage, error: null, count };
           } catch (e) {
-            return { ep, page: null, error: e instanceof FeedError ? e : new FeedError('net') };
+            return { ep, page: null, error: e instanceof FeedError ? e : new FeedError('net'), count };
           }
         })
       );
+
+      // แหล่งไหนตอบ 429 → พักทั้งคิวคำขอ (limiter) ทันที ไม่ให้ใครยิงต่อจนครบเวลา — UI อ่านเวลาที่เหลือจาก pausedFor()
+      if (results.some((r) => r.error?.kind === 'http' && r.error.status === 429) && pausedFor() === 0) backoff(null);
 
       setFeeds((s) => {
         const prev = s[w.id] ?? EMPTY;
@@ -151,7 +172,7 @@ export function useFeed(settings: Settings) {
           }
           // offset สะสมข้ามหน้า (หน้า 2 = offset ของหน้า 1 + จำนวนที่ได้) — start/cursor ใช้ของหน้าล่าสุด
           const before = mode === 'older' ? prev.next[r.ep.id] : null;
-          next[r.ep.id] = grew && r.page.rows.length >= settings.pageSize && r.page.next ? { ...r.page.next, offset: (before?.offset ?? 0) + r.page.next.offset } : (grew && r.page.next?.next ? r.page.next : null);
+          next[r.ep.id] = grew && r.page.rows.length >= (r.count || settings.pageSize) && r.page.next ? { ...r.page.next, offset: (before?.offset ?? 0) + r.page.next.offset } : (grew && r.page.next?.next ? r.page.next : null);
         }
         return { ...s, [w.id]: { rows, next, errors, loading: false, loaded: true } };
       });
@@ -162,13 +183,13 @@ export function useFeed(settings: Settings) {
   );
 
   const loadMany = useCallback(
-    (ws: Wallet[], mode: 'reset' | 'older') => {
+    (ws: Wallet[], mode: 'reset' | 'older', opts?: OlderOpts) => {
       // ยิงทีละ 4 กระเป๋า ไม่ให้แหล่งข้อมูลโดนรุมตอนนำเข้ากระเป๋าเป็นร้อย
       let i = 0;
       const worker = async () => {
         while (i < ws.length) {
           const w = ws[i++];
-          if (w) await load(w, mode);
+          if (w) await load(w, mode, opts);
         }
       };
       return Promise.all(Array.from({ length: Math.min(4, ws.length) }, worker));

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from './i18n';
 import { useStore } from './store';
-import { endpointsFor, hasOlder, useFeed } from './useFeed';
+import { bulkCount, endpointsFor, hasOlder, seeksByTime, useFeed } from './useFeed';
 import { XCapMark } from './components/XCapMark';
 import { DatabaseIcon, SettingsIcon, ShieldCheckIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -306,7 +306,11 @@ export function App() {
                 onSelect={setSelected}
                 loading={anyLoading}
                 hasMore={hasOlder(feeds[activeWalletObj.id])}
-                onMore={() => void loadMany([activeWalletObj], 'older')}
+                onMore={(o) => void loadMany([activeWalletObj], 'older', o)}
+                bulk={(() => {
+                  const eps = endpointsFor(activeWalletObj, settings);
+                  return { count: bulkCount(activeWalletObj.family, settings.pageSize), seek: eps.length > 0 && eps.some(seeksByTime) };
+                })()}
                 onReload={() => void loadMany([activeWalletObj], 'reset')}
                 onFetchMeta={fillMeta}
               />

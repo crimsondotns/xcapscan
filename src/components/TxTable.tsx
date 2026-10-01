@@ -20,6 +20,8 @@ import { SearchIcon } from 'lucide-react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { ADV_EMPTY, AdvancedFilterButton, AdvancedFilterChips, advFromTs, advMatches, type AdvFilter } from './AdvancedFilter';
 import { Spinner } from '@/components/ui/spinner';
+import type { OlderOpts } from '../useFeed';
+import { pausedFor } from '../limiter';
 
 const TYPES: TxType[] = ['swap', 'send', 'receive', 'approve', 'contract'];
 /** ตัวกรองชนิด: 'transfer' = โอน นับทั้งส่งและรับในอันเดียว ('' = ทุกประเภท) */
@@ -60,7 +62,7 @@ function mainMove(r: TxRow) {
   return real.find((m) => m.usd !== null) ?? real[0] ?? r.moves[0] ?? null;
 }
 
-export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, onToken, selected, onSelect, loading = false, hasMore = false, onMore }: { rows: TxRow[]; wallets: Wallet[]; chains: ChainMap; wallet: string; onWallet: (id: string) => void; onToken?: (symbol: string) => void; selected: string | null; onSelect: (r: TxRow) => void; loading?: boolean; hasMore?: boolean; onMore?: () => void }) {
+export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, onToken, selected, onSelect, loading = false, hasMore = false, onMore, bulk }: { rows: TxRow[]; wallets: Wallet[]; chains: ChainMap; wallet: string; onWallet: (id: string) => void; onToken?: (symbol: string) => void; selected: string | null; onSelect: (r: TxRow) => void; loading?: boolean; hasMore?: boolean; onMore?: (opts?: OlderOpts) => void; bulk?: { count: number; seek: boolean } }) {
   const { t } = useI18n();
   const { settings, setHideScam } = useStore();
   const hideScam = settings.hideScam;
@@ -132,20 +134,50 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   const fromTs = advFromTs(adv);
   const oldest = useMemo(() => rows.reduce((m, r) => (wallet && r.walletId !== wallet ? m : Math.min(m, r.time)), Number.POSITIVE_INFINITY), [rows, wallet]);
   const covered = fromTs !== null && oldest <= fromTs;
-  const MAX_PAGES = 20;
-  const [auto, setAuto] = useState<{ key: string; pages: number; stopped: boolean }>({ key: '', pages: 0, stopped: false });
-  const advKey = fromTs === null ? '' : `${wallet}|${fromTs}`;
-  const run = auto.key === advKey ? auto : { key: advKey, pages: 0, stopped: false };
-  const fetching = fromTs !== null && !!onMore && hasMore && !covered && !run.stopped && run.pages < MAX_PAGES;
+  /* กันโดน 429: หน้าละใหญ่ (sol 100 แถว), ไม่ขอ metadata ระหว่างไล่, เว้น AUTO_GAP_MS ระหว่างหน้า,
+     แหล่งที่เลื่อนหน้าด้วยเวลา (rabby: start_time) กระโดดไปวันสิ้นสุดของช่วงเลย ไม่ไล่ผ่านหน้าที่ใหม่กว่า,
+     คิวคำขอกำลังพัก (โดน 429) → หยุด ไม่ยิงต่อ */
+  const MAX_PAGES = 10;
+  const AUTO_GAP_MS = 2500;
+  const [auto, setAuto] = useState<{ key: string; pages: number; stopped: boolean; rate: number }>({ key: '', pages: 0, stopped: false, rate: 0 });
+  const toTs = adv.date === 'custom' && adv.to ? Math.floor(new Date(adv.to.getFullYear(), adv.to.getMonth(), adv.to.getDate() + 1).getTime() / 1000) : null;
+  const advKey = fromTs === null ? '' : `${wallet}|${fromTs}|${toTs}`;
+  const run = auto.key === advKey ? auto : { key: advKey, pages: 0, stopped: false, rate: 0 };
+  const want = fromTs !== null && !!onMore && hasMore && !covered && !run.stopped && !run.rate;
+  const fetching = want && run.pages < MAX_PAGES;
   const lastRows = useRef(-1);
   useEffect(() => {
     if (!fetching || loading || lastRows.current === rows.length) return;
-    lastRows.current = rows.length;
-    setAuto({ ...run, pages: run.pages + 1 });
-    onMore?.();
+    const wait = pausedFor();
+    if (wait > 0) {
+      setAuto({ ...run, rate: Math.ceil(wait / 1000) });
+      return;
+    }
+    const first = run.pages === 0;
+    const t = setTimeout(
+      () => {
+        if (pausedFor() > 0) return setAuto({ ...run, rate: Math.ceil(pausedFor() / 1000) });
+        lastRows.current = rows.length;
+        setAuto({ ...run, pages: run.pages + 1 });
+        // หน้าแรกของรอบ: กระโดดไปวันสิ้นสุดของช่วงถ้าแหล่งรองรับ และยังไม่ได้โหลดลงไปถึงตรงนั้น
+        onMore?.({ count: bulk?.count, meta: false, seek: first && bulk?.seek && toTs !== null && oldest > toTs ? toTs : undefined });
+      },
+      first ? 0 : AUTO_GAP_MS,
+    );
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetching, loading, rows.length]);
-  const capped = fromTs !== null && !!onMore && hasMore && !covered && !run.stopped && run.pages >= MAX_PAGES;
+  const capped = want && run.pages >= MAX_PAGES;
+  /* คิวคำขอพักอยู่ (429) ระหว่างไล่ → นับถอยหลังให้เห็น แทน "กำลังโหลด" ค้าง */
+  const [pauseLeft, setPauseLeft] = useState(0);
+  useEffect(() => {
+    if (!fetching && !run.rate) return setPauseLeft(0);
+    const tick = () => setPauseLeft(Math.ceil(pausedFor() / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [fetching, run.rate]);
+  const rateLimited = fromTs !== null && !covered && (run.rate > 0 || (fetching && pauseLeft > 0));
   const fromLabel = fromTs === null ? '' : new Date(fromTs * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
   const inf = useInfinite({ total: filtered.length, page: PAGE, hasMore: hasMore && !covered, loading, fetchMore: onMore, resetKey: `${wallet}|${q}|${chain}|${type}|${sort.key}${sort.dir}|${JSON.stringify(adv)}` });
@@ -211,14 +243,28 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
         </span>
       </div>
       <AdvancedFilterChips value={adv} onChange={setAdv} />
-      {(fetching || capped) && (
+      {(fetching || capped || rateLimited) && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-          {fetching ? (
+          {fetching && !rateLimited ? (
             <>
               <Spinner />
               {t('af.fetching', { date: fromLabel })}
               <Button variant="link" size="sm" onClick={() => setAuto({ ...run, stopped: true })}>
                 {t('af.stop')}
+              </Button>
+            </>
+          ) : rateLimited ? (
+            <>
+              {pauseLeft > 0 ? t('af.rate', { n: pauseLeft }) : t('af.rateReady')}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  lastRows.current = -1;
+                  setAuto({ ...run, pages: 0, rate: 0 });
+                }}
+              >
+                {t('af.continue')}
               </Button>
             </>
           ) : (
@@ -229,7 +275,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                 size="sm"
                 onClick={() => {
                   lastRows.current = -1;
-                  setAuto({ ...run, pages: 0 });
+                  setAuto({ ...run, pages: 0, rate: 0 });
                 }}
               >
                 {t('af.continue')}

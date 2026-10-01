@@ -20,10 +20,14 @@ import { Icon } from '../components/Icon';
 import { TagDialog } from '../components/TagDialog';
 import { Button } from '@/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import type { OlderOpts } from '../useFeed';
+
+/** ไล่ย้อนหลังตามตัวกรองวันที่: ขนาดหน้าที่ใช้ และแหล่งกระโดดตามเวลาได้ไหม */
+type BulkOpts = { count: number; seek: boolean };
 
 // 👇 เพิ่ม onFetchMeta เข้าไปใน props
 export function WalletPage({ 
-  wallet, all, rows, chains, group, range, onRange, onBack, onWallet, onToken, selected, onSelect, loading, hasMore, onMore, onReload, onFetchMeta 
+  wallet, all, rows, chains, group, range, onRange, onBack, onWallet, onToken, selected, onSelect, loading, hasMore, onMore, onReload, onFetchMeta, bulk 
 }: { 
   wallet: Wallet; 
   all: Wallet[]; 
@@ -39,7 +43,8 @@ export function WalletPage({
   onSelect: (r: TxRow) => void; 
   loading: boolean; 
   hasMore: boolean; 
-  onMore: () => void; 
+  onMore: (opts?: OlderOpts) => void;
+  bulk?: BulkOpts; 
   onReload: () => void;
   onFetchMeta: (w: Wallet) => void; // 👈 Type ของฟังก์ชันที่ส่งมา
 })   {
@@ -112,7 +117,7 @@ export function WalletPage({
             { value: 'history', label: t('tab.history'), count: rows.length },
           ]}
         />
-        {tab === 'tokens' ? <TokenTable rows={ranged} chains={chains} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} />}
+        {tab === 'tokens' ? <TokenTable rows={ranged} chains={chains} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} bulk={bulk} />}
       </section>
       <TagDialog open={tagsOpen} wallet={wallet} onClose={() => setTagsOpen(false)} />
     </>
