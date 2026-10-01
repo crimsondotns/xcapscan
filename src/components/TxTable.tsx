@@ -18,7 +18,7 @@ import { Field, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { SearchIcon } from 'lucide-react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { ADV_EMPTY, AdvancedFilterButton, AdvancedFilterChips, advFromTs, advMatches, type AdvFilter } from './AdvancedFilter';
+import { AdvancedFilterButton, loadAdv, saveAdv, AdvancedFilterChips, advFromTs, advMatches, type AdvFilter } from './AdvancedFilter';
 import { Spinner } from '@/components/ui/spinner';
 import type { OlderOpts } from '../useFeed';
 import { pausedFor } from '../limiter';
@@ -69,7 +69,8 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   const [q, setQ] = useState('');
   const [chain, setChain] = useState('');
   const [type, setType] = useState<TypeFilter>('');
-  const [adv, setAdv] = useState<AdvFilter>(ADV_EMPTY);
+  const [adv, setAdv] = useState<AdvFilter>(loadAdv);
+  useEffect(() => saveAdv(adv), [adv]);
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
 
   const labels = useMemo(() => new Map(wallets.map((w) => [w.id, w.label])), [wallets]);

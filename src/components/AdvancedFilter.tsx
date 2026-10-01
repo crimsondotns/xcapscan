@@ -39,6 +39,27 @@ export interface AdvFilter {
 }
 export const ADV_EMPTY: AdvFilter = { dir: 'all', status: 'all', date: 'all', amtMin: '', amtMax: '', feeMin: '', feeMax: '', tokens: [], counterparty: '', priced: false };
 
+/* จำตัวกรองขั้นสูงไว้ในเครื่อง (ผู้ใช้ 2026-10-01) — สลับกระเป๋า/รีโหลดแล้วยังกรองแบบเดิม ไม่ต้องตั้งใหม่ */
+const ADV_KEY = 'xcap.scan.advFilter';
+export function loadAdv(): AdvFilter {
+  try {
+    const raw = localStorage.getItem(ADV_KEY);
+    if (!raw) return ADV_EMPTY;
+    const v = JSON.parse(raw) as Partial<AdvFilter> & { from?: string; to?: string };
+    const day = (x?: string) => (x ? new Date(x) : undefined);
+    return { ...ADV_EMPTY, ...v, tokens: Array.isArray(v.tokens) ? v.tokens : [], from: day(v.from), to: day(v.to) };
+  } catch {
+    return ADV_EMPTY;
+  }
+}
+export function saveAdv(f: AdvFilter): void {
+  try {
+    localStorage.setItem(ADV_KEY, JSON.stringify(f));
+  } catch {
+    /* โหมดส่วนตัว / พื้นที่เต็ม → จำไม่ได้ ใช้ต่อในหน่วยความจำ */
+  }
+}
+
 const PRESET_SEC: Record<Exclude<DatePreset, 'all' | 'custom'>, number> = { '24h': 86400, '7d': 7 * 86400, '30d': 30 * 86400 };
 const num = (s: string) => {
   const v = parseFloat(s.replace(/[,$\s]/g, ''));

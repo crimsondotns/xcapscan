@@ -99,3 +99,4 @@ Do not declare work done while any of these is red.
 - Settings → "Slip labels": สวิตช์ซ่อน/แสดง 13 ส่วนของสลิป (`settings.slipShow`, `SLIP_FIELDS` ใน store.ts) — `renderSlip(..., show)` ข้ามส่วนที่ปิดและไม่วาดเส้นประของกลุ่มว่าง
 - ปุ่ม Slip ท้ายแผงขวา (คู่กับ View on explorer) → เปิดภาพสลิปแบบ **lightbox** (`SlipLightbox`: shadcn `Dialog` โปร่ง ภาพ 360px กลาง ปุ่มปิดมุมขวาบน ไม่มีแถบปุ่มใดๆ; Esc/คลิกม่านปิด) — ไม่สลับเนื้อหาแผง; ตรวจสลิปจากไอคอนโล่บนหัว (`#/v/<code>.<data>` เปิดไดอะล็อกตรวจ)
 - เมนูสลิป: เดสก์ท็อปคลิกขวา = `ContextMenu`; มือถือกดค้าง 500ms (หรือ contextmenu) = `Drawer` ล่างจอ รายการเดียวกัน (ผู้ใช้ 2026-10-01)
+- ตัวกรองขั้นสูงจำไว้ในเครื่อง (`xcap.scan.advFilter`, `loadAdv`/`saveAdv` ใน AdvancedFilter.tsx) — สลับกระเป๋า/รีโหลดแล้วยังกรองแบบเดิม ล้างได้จากชิป (ผู้ใช้ 2026-10-01)
