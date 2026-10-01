@@ -334,8 +334,9 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                       }
                     }}
                   >
-                    {/* max-w-0 + w-full: คอลัมน์ Type กินที่ที่เหลือแต่ไม่ดันตาราง → บรรทัดรองตัด … ได้ */}
-                    <TableCell className="w-full max-w-0">
+                    {/* มือถือเท่านั้น: max-w-0 + w-full ให้คอลัมน์ Type กินที่ที่เหลือแต่ไม่ดันตาราง → บรรทัดรองตัด … ได้
+                        (ถ้าใช้ทุกจอ Type จะกว้างเต็มและดัน Submitted ไปชิดขวาบนเดสก์ท็อป) */}
+                    <TableCell className="max-sm:w-full max-sm:max-w-0">
                       <span className="act">
                         <span className="act-icon">
                           {isSwap ? (
