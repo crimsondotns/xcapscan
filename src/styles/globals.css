@@ -92,17 +92,6 @@ th.num > [data-slot='button'] {
   .tx th:first-child > [data-slot='button'] {
     margin-left: -0.625rem;
   }
-  /* แถบกลุ่ม: แถวเดียวเลื่อนแนวนอน ชื่อไม่ตัดบรรทัด ขอบซ้ายตรงกับเนื้อหาการ์ด */
-  .rail {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-inline: var(--space-4);
-    margin-inline: calc(-1 * var(--space-3));
-  }
-  .rail button {
-    flex: none;
-    white-space: nowrap;
-  }
   /* ตัวเลขสรุป: ไม่มี padding ซ้อนกับ gap ของกริด */
   .stat {
     padding: 0;
