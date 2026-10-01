@@ -3,6 +3,7 @@
  * 1. ไม่มี URL ของแหล่งข้อมูลจริงฝังในซอร์ส (ผู้ใช้ต้องใส่เองตอนใช้งาน)
  * 2. ไม่มีข้อความไทยตรงใน .tsx (ทุกข้อความผ่าน t())
  * 3. CSS: ไม่มี font-size เป็น px ลอย, ไม่มี gradient, ไม่มี uppercase, สีดิบอยู่ได้เฉพาะ tokens.css
+ * 4. shadcn: cn มาจาก @/lib/utils เท่านั้น (CLI บางครั้งเขียน import จากแพ็กเกจ "cn"), ไม่มี import src/modal
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,7 +27,9 @@ for (const f of files) {
     if (!/fonts\.g|w3\.org|example\.invalid|accounts\.google\.com/.test(m[0])) bad.push(`${f}: hardcoded URL ${m[0]}`);
   }
   if (f.endsWith('.tsx') && /type=["']number["']/.test(code)) bad.push(`${f}: type="number" (use type="text" inputMode="numeric")`);
-  if (f.endsWith('.tsx') && /<select\b/.test(code)) bad.push(`${f}: native <select> (use components/Dropdown)`);
+  if (f.endsWith('.tsx') && /<select\b/.test(code)) bad.push(`${f}: native <select> (use shadcn Select / components/Dropdown)`);
+  if (/from ['"]cn['"]/.test(code)) bad.push(`${f}: import cn from '@/lib/utils', not the "cn" package`);
+  if (/from ['"][./]*modal['"]/.test(code)) bad.push(`${f}: modal.ts was removed — use shadcn Dialog/Sheet/Drawer`);
   if (f.endsWith('.tsx') && !f.endsWith('i18n.tsx')) {
     const jsx = code.replace(/\{[^{}]*\}/g, '');
     if (/[฀-๿]/.test(jsx)) bad.push(`${f}: Thai text outside t()`);

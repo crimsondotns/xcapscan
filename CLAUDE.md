@@ -8,7 +8,7 @@ XCap Scan — static multi-wallet transaction list (React 19 + Vite, GitHub Page
 
 Key rules: semantic tokens only (`background`, `foreground`, `primary`, `muted`, `muted-foreground`, `border`, `ring`, `destructive`…), never raw colours and no manual dark overrides; use existing shadcn components and their built-in variants before custom markup; `className` for layout, not for restyling components; `flex` + `gap-*` (no `space-*`); `size-*` for equal sides; forms use `FieldGroup` + `Field`, option sets use `ToggleGroup`, buttons inside inputs use `InputGroup`; overlays (`Dialog`, `Sheet`, `Drawer`) always have a title; empty states `Empty`, loading `Skeleton`, labels `Badge`, dividers `Separator`; icons in buttons use `data-icon`, no sizing classes on icons. Both light and dark theme must work, and `prefers-reduced-motion` is honoured.
 
-The app itself still runs on plain CSS (`src/styles/tokens.css`) and has not been migrated to Tailwind/shadcn yet; until it is, new or changed UI follows the shadcn rules above in look and structure, with values kept as tokens in `tokens.css`. The shadcn reference build lives in `mockups/shadcn-filter/` (Vite + Tailwind 4, `base-nova`, Base UI).
+Stack (migrated 2026-10-01): Tailwind 4 + shadcn `base-nova` on Base UI (`components.json`, alias `@/`, `cn` from `@/lib/utils` — never the `cn` npm package the CLI sometimes writes; fix the import after every `shadcn add`). Components live in `src/components/ui/` (add with `pnpm dlx shadcn@latest add <name>`, never hand-copy). Colours are shadcn tokens in `src/styles/tokens.css` (`--background` … `--ring`, plus `--positive` / `--warning`); old `--color-*` names are aliases kept only for the remaining legacy CSS. `src/styles/globals.css` = Tailwind + theme; `app.css` is imported into `@layer legacy` *below* Tailwind utilities, so shadcn classes always win — new UI uses Tailwind classes, not new rules in `app.css`. Dark mode = `data-theme='dark'` on `<html>` (custom variant `dark`). Mobile breakpoint hook: `src/hooks/useIsMobile.ts`.
 
 ## Before every delivery — mandatory audit
 
@@ -36,9 +36,9 @@ Never collapses. Each row is a button: click = switch the active wallet (table f
 - **Zero hints to the client.** No placeholder text, helper text, example URLs, placeholder syntax (`{address}` etc.), chain explanations or request previews in the UI or README. Labels only; errors are generic ("Invalid URL"). The user is expected to know.
 - All UI text goes through `t()` in `src/i18n.tsx` (Thai key + English pair). No literal Thai in `.tsx`.
 - No `px` font-size in CSS; use `--size-*` tokens. No gradients.
-- Icons only via `components/Icon.tsx` until the shadcn migration (then lucide via `data-icon`, per the skill).
+- Icons are lucide-react: import from `lucide-react` directly in new code (`data-icon` inside buttons); `components/Icon.tsx` is a name→lucide map kept for existing callers.
 - No `type="number"` inputs (spinner arrows banned): numeric fields are `type="text" inputMode="numeric"`, typed by hand.
-- No native `<select>`; every dropdown uses `components/Dropdown.tsx` until the shadcn migration (then shadcn `Select` / `DropdownMenu` / `Combobox`).
+- No native `<select>`; dropdowns use shadcn `Select` (`components/Dropdown.tsx` wraps it with the old API) / `DropdownMenu` / `Popover` + `Command`.
 
 ## Commands
 
@@ -70,14 +70,14 @@ Do not declare work done while any of these is red.
 
 ## Skeleton / header (2026-09-22)
 
-- `components/Skeleton.tsx`: `SkeletonRows` (แถว shimmer สูง 64px เท่าแถวจริง) ใช้ในตารางธุรกรรมทั้งสองตอนโหลดครั้งแรก, `SkeletonBar` ในช่อง Transactions ของตารางกระเป๋าตอนกระเป๋านั้นโหลด; shimmer ทำด้วย pseudo-element เลื่อน + pulse 1.5s (ห้าม gradient ตาม check)
+- `components/Skeleton.tsx` (ห่อ shadcn `Skeleton`): `SkeletonRows` (แถวสูง 64px เท่าแถวจริง) ใช้ในตารางธุรกรรมตอนโหลดครั้งแรก, `SkeletonBar` ในช่องของตารางกระเป๋าตอนกระเป๋านั้นโหลด
 - ปุ่ม Import file อยู่ที่หัวเว็บ (XCap · Import · Settings); ตารางกระเป๋ามี Add/Clear
 - หัวคอลัมน์ตาราง padding 16px แนวตั้ง, เซลล์ 12px
 
 ## แผงขวา + Settings (2026-09-22)
 
-- `DetailPanel` และ `.drawer-scrim` render ผ่าน `createPortal(…, document.body)` — เป็น sibling ของ `#root` ไม่อยู่ในกล่องตาราง; `.drawer` fixed `top/right/bottom: 0; width: min(440px,100vw)` z-index 1000, scrim 999; **ห้ามมีกติกาดัน layout** (เอา `.layout[data-drawer]` margin ออกแล้ว) — ตารางต้องนิ่งเมื่อเปิดแผง
-- Settings = "settings panel": แถวแหล่งข้อมูลไม่มีกรอบรอบการ์ด คั่นด้วย hairline: grip ลากจัดลำดับ (`reorderEndpoints`) · ไอคอนชนิด · ชื่อ + dropdown รูปแบบที่อยู่ · "Priority N · URL" · สวิตช์ `.switch` (role=switch) · ลบ
+- `DetailPanel` = shadcn `Sheet` (ขวา กว้าง 440px; มือถือ `side=bottom` เต็มจอ) ปุ่ม View = `DropdownMenu` เปิดขึ้นบน; **ห้ามมีกติกาดัน layout** — ตารางต้องนิ่งเมื่อเปิดแผง
+- Settings = "settings panel": แถวแหล่งข้อมูลไม่มีกรอบรอบการ์ด คั่นด้วย hairline: grip ลากจัดลำดับ (`reorderEndpoints`) · ไอคอนชนิด · ชื่อ + dropdown รูปแบบที่อยู่ · "Priority N · URL" · สวิตช์ shadcn `Switch` · ลบ
 
 ## Rate limit (2026-09-22)
 - ทุก fetch ผ่าน `limitedFetch` (`src/limiter.ts`): พร้อมกัน ≤2, เว้น 300ms, โดน 429 → พักทั้งคิว (Retry-After หรือ 5s×2ⁿ ≤60s) แล้วยิงซ้ำเองสูงสุด 4 ครั้ง — ห้ามเรียก fetch ตรง
@@ -93,8 +93,8 @@ Do not declare work done while any of these is red.
 - แหล่งข้อมูลแต่ละอันมี `metaUrl` (เลือกใส่) — หลังโหลดหน้า โทเคนที่ยังไม่รู้ชื่อ/สัญลักษณ์/โลโก้ (`unknownTokens`) ถูกขอเป็นชุด ≤50 ที่อยู่ เว้น 1.5 วิ (`src/tokens.ts`, แคช localStorage 7 วัน `xcap.scan.tokens`) แล้วเติมลงแถวก่อนแสดง (`applyTokenMeta`) — ไม่ยิงขอราคา/metadata แยกตอน render
 - Solana-family ที่ไม่มี placeholder ประกอบเป็น `?ownerAddress={address}&limit={count}`; แหล่งที่ใช้ path/พารามิเตอร์อื่นให้ผู้ใช้วาง URL ที่มี `{address}` `{count}` `{cursor}` เอง
 - สลิป (`src/slip.ts`): แบบ Thermal receipt (mock 2a ผู้ใช้เลือก 2026-09-22) กว้าง 320 ขอบล่างหยัก เส้นประ — XCap Scan กลาง → เช็คเขียว/กากบาทแดง + Transaction successful/failed → Received/Sent ตัวเลขใหญ่ (เขียวเฉพาะขาเข้า ตรงนี้ที่เดียว) → บล็อกสินทรัพย์ (โลโก้โทเคน + ตราเชน จำนวนสีหมึก) + fee/ส่วนต่างสวอป → Wallet/To/Status → hash เต็ม → QR → รหัส; ไม่มีจุด/สัญลักษณ์สีเชน; วาดด้วย Canvas 2D พื้นขาวเสมอ + QR (`qrcode`) ของลิงก์ explorer หรือ hash; รหัสยืนยัน = SHA-256 ของฟิลด์เนื้อหา (ชื่อเชน/ป้ายกระเป๋า/ลิงก์ไม่อยู่ในแฮช); สำเนาใน `xcap.scan.slips` ไม่เขียนทับ; ลิงก์แชร์ `#/v/<code>.<base64url(json)>` พกข้อมูลไปเอง → ตรวจได้ทุกเครื่องที่เปิดแอปนี้ ไม่มีเซิร์ฟเวอร์ ไม่มี RPC
-- ชั้นโมดัลทุกชนิด (Dialog / แผงขวา `DrawerLayer` / `SlipLightbox`) portal ไป body และเรียก `useModalLayer` (`src/modal.ts`): ชั้นบนสุดเท่านั้นที่มีชีวิต ลูกอื่นของ body ติด `inert` + body ล็อกสกรอลล์ (ยกเว้น `.toasts`) — ห้ามตั้ง body.style.overflow เองที่อื่น
+- ชั้นโมดัลทุกชนิดเป็น Base UI ของ shadcn (`Dialog`/`Drawer` ผ่าน `components/Dialog.tsx`, `AlertDialog` ใน ConfirmDialog, `Sheet` ใน DetailPanel, `Dialog` ใน SlipLightbox) — Base UI จัด portal/โฟกัส/inert/ล็อกสกรอลล์/Esc เอง; ห้ามเขียนชั้นโมดัลหรือตั้ง body.style.overflow เอง (`src/modal.ts` ถูกลบแล้ว)
 - สลิปของแถวที่ติดธง (`row.flagged`, mock S4 ผู้ใช้เลือก 2026-09-22): แถบเหลืองเฉียงบน, สามเหลี่ยมเตือนสีเหลือง "Review before trusting", กล่องเหลือง "Why this is flagged" จาก `src/risk.ts` (สัญลักษณ์เลียนแบบ / ธงจากแหล่ง / airdrop / ไม่มีราคา — เหตุผลจริงเท่านั้น ไม่เดา), ตัวเลขใหญ่สีเทา, ⚠ แดงหลังสัญลักษณ์, QR จาง + ป้าย "Verify first"; `flagged` อยู่ในแฮชรหัสยืนยัน สี `--color-warn*` ใช้ในภาพสลิปเท่านั้น
 - ภาพสลิปแสดงผ่าน `SlipPicture`: PNG + ชั้น `<span>` โปร่งใสวางตามพิกัดที่ `renderSlip` จดไว้ (`texts`) แล้ว scale ตามความกว้างจริง → ลากเลือก/ไฮไลต์/คัดลอกข้อความบนสลิปได้ (สีไฮไลต์ `--color-selection`)
 - Settings → "Slip labels": สวิตช์ซ่อน/แสดง 13 ส่วนของสลิป (`settings.slipShow`, `SLIP_FIELDS` ใน store.ts) — `renderSlip(..., show)` ข้ามส่วนที่ปิดและไม่วาดเส้นประของกลุ่มว่าง
-- ปุ่ม Slip ท้ายแผงขวา (คู่กับ View on explorer) → เปิดภาพสลิปแบบ **lightbox** (`SlipLightbox`: portal ไป body z 1100, ม่าน `--color-lightbox`, ภาพ 360px กลาง, ปุ่มปิดมุมขวาบน ไม่มีแถบปุ่มใดๆ; Esc/คลิกม่านปิด) — ไม่ใช่ไดอะล็อก ไม่สลับเนื้อหาแผง; ตรวจสลิปจากไอคอนโล่บนหัว (`#/v/<code>.<data>` เปิดไดอะล็อกตรวจ)
+- ปุ่ม Slip ท้ายแผงขวา (คู่กับ View on explorer) → เปิดภาพสลิปแบบ **lightbox** (`SlipLightbox`: shadcn `Dialog` โปร่ง ภาพ 360px กลาง ปุ่มปิดมุมขวาบน ไม่มีแถบปุ่มใดๆ; Esc/คลิกม่านปิด) — ไม่สลับเนื้อหาแผง; ตรวจสลิปจากไอคอนโล่บนหัว (`#/v/<code>.<data>` เปิดไดอะล็อกตรวจ)

@@ -147,14 +147,6 @@ button.brand:hover {
 .top-spacer {
   flex: 1;
 }
-.top-status {
-  color: var(--color-tertiary);
-  font-size: var(--size-caption);
-  white-space: nowrap;
-}
-.top-status[data-ok='true'] {
-  color: var(--color-muted);
-}
 
 .layout {
   display: grid;
@@ -210,38 +202,7 @@ button.brand:hover {
   background: var(--color-bg);
   border-color: var(--color-line);
 }
-.btn-primary {
-  background: var(--color-ink);
-  color: var(--color-bg);
-  border: 0;
-}
-.btn.btn-primary:hover {
-  background: var(--color-ink-hover);
-  border-color: transparent;
-}
-.btn.btn-primary:disabled,
-.btn.btn-primary:disabled:hover {
-  background: var(--color-soft);
-  color: var(--color-disabled);
-}
-.btn-sm {
-  min-height: 32px;
-  padding: 0 var(--space-3);
-}
-.btn-icon {
-  min-height: 36px;
-  min-width: 36px;
-  padding: 0;
-  border-color: transparent;
-  color: var(--color-muted);
-}
-.btn.btn-icon:hover {
-  color: var(--color-ink);
-  background: var(--color-hover);
-  border-color: transparent;
-}
-.btn svg,
-.btn-icon svg {
+.btn svg {
   width: 16px;
   height: 16px;
 }
@@ -310,13 +271,6 @@ input[type='file'].input::file-selector-button {
   font: var(--weight-medium) var(--size-label) / 1.4 var(--font-sans);
   cursor: pointer;
 }
-.hint {
-  font-size: var(--size-caption);
-  font-weight: var(--weight-book);
-  line-height: 1.4;
-  color: var(--color-muted);
-  overflow-wrap: anywhere;
-}
 .error {
   font-size: var(--size-caption);
   line-height: 1.4;
@@ -356,13 +310,6 @@ input[type='file'].input::file-selector-button {
 .panel > :not(dialog) {
   margin: 0;
 }
-.panel-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-1);
-}
 .panel .row-actions {
   gap: var(--space-2);
 }
@@ -370,40 +317,10 @@ input[type='file'].input::file-selector-button {
   margin-top: 0;
   gap: 2px;
 }
-.panel-title {
-  font-size: var(--size-heading-sm);
-  font-weight: var(--weight-medium);
-}
 .row-actions {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
-}
-
-.wallet-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--size-caption);
-  color: var(--color-tertiary);
-  white-space: nowrap;
-}
-.wallet-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--color-tertiary);
-}
-.wallet-state[data-state='ok'] .wallet-dot {
-  background: var(--color-ink);
-}
-.wallet-state[data-state='error'],
-.wallet-state[data-state='nosource'] {
-  color: var(--color-danger);
-}
-.wallet-state[data-state='error'] .wallet-dot,
-.wallet-state[data-state='nosource'] .wallet-dot {
-  background: var(--color-danger);
 }
 /* วงหมุนต่อกระเป๋า — เส้นเดียวสีหมึกจาง */
 .spinner {
@@ -432,16 +349,6 @@ input[type='file'].input::file-selector-button {
   flex-direction: column;
   gap: var(--space-6);
 }
-.wallets-panel .panel-head {
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-.tfoot .chev {
-  transition: transform var(--motion-slow) var(--easing-standard);
-}
-.chev-up {
-  transform: rotate(180deg);
-}
 .wtab-wrap {
   margin-inline: calc(-1 * var(--space-4));
 }
@@ -462,8 +369,7 @@ input[type='file'].input::file-selector-button {
   gap: var(--space-3);
   min-width: 0;
 }
-.wt-row[data-hidden='true'] .wt-cell,
-.wt-row[data-hidden='true'] .wt-addr {
+.wt-row[data-hidden='true'] .wt-cell {
   opacity: 0.45;
 }
 .wt-label {
@@ -471,28 +377,6 @@ input[type='file'].input::file-selector-button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.wt-addr {
-  color: var(--color-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.wtab .wallet-state {
-  font-size: var(--size-body);
-  color: var(--color-ink);
-}
-.wtab .wallet-state[data-state='idle'],
-.wtab .wallet-state[data-state='loading'] {
-  color: var(--color-tertiary);
-}
-
-/* ช่อง header/API key ใต้ URL — สองช่องเท่ากัน */
-.auth-row {
-  align-items: flex-end;
-}
-.auth-row .field {
-  flex: 1;
-  min-width: 0;
 }
 
 /* รายการแหล่งข้อมูลใน Settings (settings panel): ไม่มีกรอบรอบการ์ด — แถวคั่นด้วย hairline
@@ -523,99 +407,6 @@ input[type='file'].input::file-selector-button {
 }
 .source[data-dragover='true'] {
   box-shadow: inset 0 2px 0 var(--color-ink);
-}
-.source[data-off='true'] .wallet-meta,
-.source[data-off='true'] .source-icon {
-  opacity: 0.5;
-}
-.source .wallet-meta {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-/* หัวข้อกับคำอธิบายของหัวข้อ — ชิดกันเป็นคู่ ไม่ใช่ระยะเดียวกับระหว่างกลุ่ม */
-.field-head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-/* ช่องกรอกสั้น (จำนวนต่อหน้า / chain id) — ความกว้างเดียวกันทั้งสองที่ แทน max-width เฉพาะกิจใน TSX */
-.field-narrow {
-  max-width: 140px;
-}
-/* ไอคอนกำกับหน้าแถวข้อมูลแหล่ง (มีกุญแจ / มี metadata) */
-.meta-flag {
-  vertical-align: -1px;
-  margin-right: var(--space-1);
-}
-/* ฟอร์ม Token metadata URL ใต้แต่ละแหล่ง */
-.source-meta {
-  margin-top: var(--space-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.source-meta .label {
-  font-size: var(--size-caption);
-  color: var(--color-muted);
-}
-.input-sm {
-  min-height: 32px;
-  padding-top: 0;
-  padding-bottom: 0;
-  font-size: var(--size-caption);
-}
-.source .wallet-label {
-  font-weight: var(--weight-medium);
-  display: inline-flex;
-  align-items: center;
-}
-.source .wallet-addr {
-  color: var(--color-muted);
-  font-size: var(--size-caption);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.source .wallet-label {
-  gap: var(--space-2);
-}
-.source-grip {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: var(--space-4);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-tertiary);
-  cursor: grab;
-  opacity: 0;
-  transition: opacity var(--motion-fast) var(--easing-standard);
-}
-.source-grip svg {
-  width: 14px;
-  height: 14px;
-}
-.source:hover .source-grip {
-  opacity: 1;
-}
-.source-icon {
-  width: 36px;
-  height: 36px;
-  flex: none;
-  border-radius: var(--radius-sm);
-  background: var(--color-soft);
-  color: var(--color-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.source-icon[data-on='true'] {
-  color: var(--color-ink);
 }
 /* สวิตช์เปิด/ปิด — หมึกเมื่อเปิด เส้นเมื่อปิด */
 .switch {
@@ -651,47 +442,6 @@ input[type='file'].input::file-selector-button {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
-.wallet-check {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  min-width: 36px;
-  justify-content: center;
-  cursor: pointer;
-}
-.wallet-check input {
-  accent-color: var(--color-ink);
-  margin: 0;
-  width: 18px;
-  height: 18px;
-}
-.btn-text {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: var(--color-muted);
-  font: var(--weight-medium) var(--size-caption) / 1.4 var(--font-sans);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-}
-.btn-text:hover {
-  color: var(--color-ink);
-}
-.btn-text:disabled {
-  color: var(--color-disabled);
-  cursor: default;
-}
-.btn-text svg {
-  width: 14px;
-  height: 14px;
-}
-.btn-text-danger,
-.btn-text-danger:hover {
-  color: var(--color-danger);
-}
 
 /* ---------- ตารางธุรกรรม ---------- */
 
@@ -706,11 +456,6 @@ input[type='file'].input::file-selector-button {
   width: auto;
   min-width: 140px;
   max-width: 360px;
-}
-.toolbar .dd-btn {
-  min-height: var(--input-h);
-  font-size: var(--size-body);
-  font-weight: 400;
 }
 .toolbar h1 {
   font-size: var(--size-heading-md);
@@ -817,46 +562,10 @@ input[type='file'].input::file-selector-button {
   color: var(--color-tertiary);
   font-size: var(--size-caption);
 }
-.cell-wallet {
-  max-width: 160px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: var(--weight-medium);
-}
-.chip {
-  display: inline-block;
-  font-family: var(--font-sans);
-  padding: 2px var(--space-2);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-pill);
-  font-size: var(--size-caption);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-  background: var(--color-bg);
-}
-.chip[data-failed='true'] {
-  color: var(--color-danger);
-  border-color: var(--color-danger);
-}
 .moves {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-.move {
-  font-family: var(--font-mono);
-  font-size: var(--size-caption);
-  font-variant-numeric: tabular-nums;
-}
-.move .amt {
-  white-space: nowrap;
-}
-.move[data-dir='out'] {
-  color: var(--color-muted);
-}
-.move .usd {
-  color: var(--color-tertiary);
 }
 .flag {
   display: inline-block;
@@ -875,71 +584,6 @@ input[type='file'].input::file-selector-button {
   gap: var(--space-1);
   white-space: nowrap;
 }
-.addr .btn-icon {
-  min-height: 28px;
-  min-width: 28px;
-}
-.addr .btn-icon svg {
-  width: 14px;
-  height: 14px;
-}
-.cp-name {
-  display: block;
-  font-weight: var(--weight-medium);
-}
-
-.sk-row td {
-  height: 64px;
-}
-.tx tbody tr.sk-row {
-  cursor: default;
-}
-.tx tbody tr.sk-row:hover td {
-  background: transparent;
-}
-.sk-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.num .sk-cell {
-  justify-content: flex-end;
-  width: 100%;
-}
-/* shimmer: พื้นเทาอ่อน + แถบสว่างวิ่งผ่าน (pseudo-element เลื่อน, ไม่ใช้ gradient) และเต้นเบาๆ วน 1.5 วิ */
-.sk {
-  position: relative;
-  display: inline-block;
-  overflow: hidden;
-  background: var(--color-line-subtle);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-.sk::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: var(--color-hover);
-  opacity: 0.9;
-  transform: translateX(-150%);
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-.sk-bar {
-  height: 12px;
-  border-radius: var(--radius-sm);
-  max-width: 100%;
-}
-.sk-block {
-  display: block;
-  width: 100%;
-  border-radius: var(--radius-md);
-}
-.sk-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-pill);
-  flex: none;
-}
 @keyframes shimmer {
   from {
     transform: translateX(-150%);
@@ -957,12 +601,6 @@ input[type='file'].input::file-selector-button {
     opacity: 0.6;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .sk,
-  .sk::after {
-    animation: none;
-  }
-}
 .more {
   display: flex;
   align-items: center;
@@ -973,41 +611,10 @@ input[type='file'].input::file-selector-button {
   color: var(--color-tertiary);
   font-size: var(--size-caption);
 }
-.tfoot {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-6);
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-/* หัวตารางกดเรียงได้ */
-.th-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-}
-.th-btn:hover {
-  color: var(--color-ink);
-}
 .th-ico {
   width: 14px;
   height: 14px;
   color: var(--color-tertiary);
-}
-th[aria-sort='ascending'] .th-btn,
-th[aria-sort='descending'] .th-btn {
-  color: var(--color-ink);
-}
-.tx .num .th-btn {
-  flex-direction: row-reverse;
 }
 .tx-row {
   cursor: pointer;
@@ -1018,17 +625,6 @@ th[aria-sort='descending'] .th-btn {
 .tx-row:focus-visible {
   outline: 2px solid var(--color-ink);
   outline-offset: -2px;
-}
-.tx-wallet {
-  display: block;
-  font-weight: var(--weight-medium);
-}
-.tx-hash {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--color-muted);
-  white-space: nowrap;
 }
 .tx .num[data-sign='neg'] {
   color: var(--color-muted);
@@ -1146,14 +742,6 @@ th[aria-sort='descending'] .th-btn {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.tx-id {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.tx-id-text {
-  min-width: 0;
-}
 
 /* ไอคอน "คัดลอกแล้ว" เด้งเข้า: ย่อ 0.8 → 1 พร้อมจางเข้า */
 @keyframes pop {
@@ -1166,31 +754,6 @@ th[aria-sort='descending'] .th-btn {
     opacity: 1;
   }
 }
-.pop {
-  animation: pop 0.3s var(--easing-standard, ease-out);
-}
-.btn-icon[data-copied='true'] {
-  color: var(--color-positive);
-}
-@media (prefers-reduced-motion: reduce) {
-  .pop {
-    animation: none;
-  }
-}
-
-/* ---------- แผงขวา (รายละเอียด) ---------- */
-
-/* ม่านทึบหลังแผงขวา — คลิกเพื่อปิด */
-.drawer-scrim {
-  position: fixed;
-  inset: 0;
-  background: var(--color-scrim);
-  border: 0;
-  padding: 0;
-  z-index: 999;
-  cursor: default;
-  animation: scrim-in var(--motion-slow) var(--easing-standard);
-}
 @keyframes scrim-in {
   from {
     opacity: 0;
@@ -1200,7 +763,6 @@ th[aria-sort='descending'] .th-btn {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .drawer-scrim,
   .drawer {
     animation: none;
   }
@@ -1230,17 +792,6 @@ th[aria-sort='descending'] .th-btn {
     opacity: 1;
   }
 }
-.drawer-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--color-line-subtle);
-}
-.drawer-head h2 {
-  font-size: var(--size-heading-sm);
-}
 .drawer-body {
   flex: 1;
   overflow-y: auto;
@@ -1248,35 +799,6 @@ th[aria-sort='descending'] .th-btn {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-}
-.ev-head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.ev-title {
-  font-size: var(--size-heading-lg);
-}
-.ev-sub {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
-  color: var(--color-muted);
-  font-size: var(--size-label);
-}
-.ev-status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-.ev-status svg {
-  width: 14px;
-  height: 14px;
-}
-.ev-status[data-failed='true'] {
-  color: var(--color-danger);
 }
 
 /* สินทรัพย์ (เดี่ยว / คู่สลับ) */
@@ -1464,80 +986,11 @@ th[aria-sort='descending'] .th-btn {
   font-weight: inherit;
   text-align: right;
 }
-
-/* ปุ่มล่างแผง */
-.drawer-foot {
-  padding: var(--space-4) var(--space-6) calc(var(--space-6) + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-.drawer-foot .btn {
-  width: 100%;
-  min-width: 0;
-}
-/* ปุ่มเดียวของแผงขวา + เมนูลอยเปิดขึ้นด้านบน (แผงลอย = มีเงาได้) */
-.view-menu {
-  position: relative;
-}
-.view-menu-panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(100% + var(--space-2));
-  padding: var(--space-1);
-  gap: var(--space-1);
-  overflow: hidden;
-  background: var(--color-bg);
-  border: 1px solid var(--color-line-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-float);
-  display: flex;
-  flex-direction: column;
-  animation: dd-in var(--motion-base) var(--easing-standard);
-}
-/* แถวเหมือนแถบซ้าย (.rail button): มุมมน ตัวอักษรรอง hover พื้นอ่อน ไม่มีเส้นคั่น */
-.view-menu-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  min-height: 40px;
-  padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: none;
-  color: var(--color-muted);
-  font: var(--weight-regular) var(--size-label) / 1.4 var(--font-sans);
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: background var(--motion-fast) var(--easing-standard), color var(--motion-fast) var(--easing-standard);
-}
-.view-menu-item:hover {
-  background: var(--color-soft);
-  color: var(--color-ink);
-}
-.view-menu-item:focus-visible {
-  outline: 2px solid var(--color-ink);
-  outline-offset: -2px;
-}
-.view-menu-item:disabled {
-  color: var(--color-disabled);
-  background: none;
-  cursor: default;
-}
 /* กล่องสินทรัพย์พื้นอ่อน */
 .ev-asset {
   background: var(--color-soft);
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-4);
-}
-.ev-status[data-failed='false'] {
-  color: var(--color-positive);
 }
 
 
@@ -1565,44 +1018,6 @@ th[aria-sort='descending'] .th-btn {
   font-size: var(--size-body-lg);
   max-width: 52ch;
   text-wrap: pretty;
-}
-
-/* ---------- ไดอะล็อก ---------- */
-
-dialog.dlg {
-  /* กลางจอเสมอ (เปิด/ย่อขยาย) — ไม่พึ่ง margin:auto ของ UA เพราะ .panel > * รีเซ็ต margin */
-  position: fixed;
-  inset: 0;
-  margin: auto;
-  background: var(--color-bg);
-  color: var(--color-ink);
-  border: 1px solid var(--color-line-subtle);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-soft);
-  padding: var(--space-6);
-  width: min(520px, calc(100vw - 2 * var(--space-4)));
-  max-height: calc(100dvh - 2 * var(--space-4));
-}
-dialog.dlg::backdrop {
-  background: var(--color-scrim);
-}
-.dlg .input {
-  max-width: none;
-}
-.dlg form,
-.dlg .stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-.dlg h2 {
-  font-size: var(--size-heading-md);
-}
-.dlg-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  flex-wrap: wrap;
 }
 
 .preview {
@@ -1648,45 +1063,6 @@ dialog.dlg::backdrop {
   border-radius: var(--radius-pill);
   background: var(--color-bg);
 }
-.seg-item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 28px;
-  padding: 0 var(--space-3);
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--color-muted);
-  font: var(--weight-medium) var(--size-caption) / 1.4 var(--font-sans);
-  cursor: pointer;
-  transition: background-color var(--motion-base) var(--easing-standard), color var(--motion-base) var(--easing-standard);
-}
-.seg-item svg {
-  width: 14px;
-  height: 14px;
-}
-.seg-item:hover {
-  color: var(--color-ink);
-  background: var(--color-hover);
-}
-.seg-item[aria-checked='true']:hover {
-  background: var(--color-ink-hover);
-}
-.seg-item[aria-checked='true'] {
-  background: var(--color-ink);
-  color: var(--color-bg);
-}
-@media (max-width: 640px) {
-  .seg-item span {
-    display: none;
-  }
-  .seg-item {
-    min-width: 28px;
-    justify-content: center;
-    padding: 0;
-  }
-}
 
 /* ปุ่มสลับแบบ pill (เช่น ซ่อนรายการน่าสงสัย) */
 .toggle[aria-pressed='true'] {
@@ -1698,76 +1074,6 @@ dialog.dlg::backdrop {
   background: var(--color-ink-hover);
   border-color: var(--color-ink-hover);
 }
-
-/* ยืนยันการลบ */
-.confirm-msg {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: var(--size-body-lg);
-  text-wrap: pretty;
-}
-.btn.btn-danger {
-  background: var(--color-danger);
-}
-.btn.btn-danger:hover {
-  background: var(--color-danger);
-  opacity: 0.85;
-}
-
-/* ---------- Dropdown panel ---------- */
-
-.dd {
-  position: relative;
-  display: inline-flex;
-}
-.dd-block,
-.dd-block .dd-btn {
-  width: 100%;
-}
-.dd-btn {
-  justify-content: space-between;
-  min-height: var(--input-h);
-  gap: var(--space-2);
-}
-.dd-btn.btn-sm {
-  min-height: 36px;
-  padding: 0 var(--space-3);
-}
-.dd-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.dd-chev {
-  color: var(--color-muted);
-  flex: none;
-  transition: transform var(--motion-base) var(--easing-standard);
-}
-.dd-btn[aria-expanded='true'] .dd-chev {
-  transform: rotate(180deg);
-}
-.dd-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + var(--space-2));
-  left: 0;
-  right: auto;
-  min-width: max(100%, 160px);
-  max-height: 320px;
-  overflow-y: auto;
-  margin: 0;
-  padding: var(--space-1);
-  list-style: none;
-  background: var(--color-bg);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft);
-  z-index: 30;
-  animation: dd-in var(--motion-base) var(--easing-standard);
-}
-.dd-panel.dd-right {
-  left: auto;
-  right: 0;
-}
 @keyframes dd-in {
   from {
     opacity: 0;
@@ -1777,56 +1083,6 @@ dialog.dlg::backdrop {
     opacity: 1;
     transform: none;
   }
-}
-.dd-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  min-height: 36px;
-  padding: 0 var(--space-2) 0 var(--space-3);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--color-ink);
-  text-align: left;
-  font-size: var(--size-body);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color var(--motion-fast) var(--easing-standard);
-}
-.dd-item:hover,
-.dd-item:focus-visible {
-  background: var(--color-hover);
-  outline: none;
-}
-.dd-item-text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.dd-item[aria-selected='true'] {
-  font-weight: var(--weight-medium);
-}
-.dd-item small {
-  color: var(--color-tertiary);
-  font-size: var(--size-caption);
-  margin-left: var(--space-2);
-}
-.dd-check {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  visibility: hidden;
-}
-.dd-item[aria-selected='true'] .dd-check {
-  visibility: visible;
-}
-
-/* ---------- toast ---------- */
-
-.drawer-layer {
-  display: contents;
 }
 .toasts {
   position: fixed;
@@ -1861,20 +1117,14 @@ dialog.dlg::backdrop {
 
 @media (prefers-reduced-motion: reduce) {
   *,
-  *::before,
-  *::after {
+*::before,
+*::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
 }
 
 @media (max-width: 639px) {
-  .top-status {
-    display: none;
-  }
-  .tx .col-last {
-    display: none;
-  }
   .empty {
     padding: var(--space-12) var(--space-4);
   }
@@ -1884,18 +1134,10 @@ dialog.dlg::backdrop {
   .panel {
     padding: var(--space-4);
   }
-  .btn-icon,
-  .btn-sm,
-  .dd-btn.btn-sm {
-    min-height: 44px;
-    min-width: 44px;
-  }
   .row-actions .btn {
     flex: 1 1 auto;
   }
-  .toolbar .input,
-  .toolbar .dd,
-  .toolbar .dd-btn {
+  .toolbar .input {
     width: 100%;
     max-width: none;
   }
@@ -1911,19 +1153,8 @@ dialog.dlg::backdrop {
     min-width: 520px;
   }
   .tx th:nth-child(4),
-  .tx td:nth-child(4) {
+.tx td:nth-child(4) {
     display: none;
-  }
-  /* โมดัล = bottom sheet เต็มจอ */
-  dialog.dlg {
-    inset: auto 0 0 0;
-    margin: 0;
-    width: 100%;
-    max-width: none;
-    max-height: 92dvh;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    border-bottom: 0;
-    padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
   }
   .drawer {
     width: 100vw;
@@ -1939,25 +1170,6 @@ dialog.dlg::backdrop {
     min-width: 600px;
   }
 }
-/* เดสก์ท็อป: โมดัลกว้างสุด 80% ของจอ (ไม่เกิน 520px) */
-@media (min-width: 1025px) {
-  dialog.dlg {
-    width: min(520px, 80vw);
-  }
-}
-
-/* สลิป — พรีวิวภาพ (เอกสารขาว/ดำเสมอ) + ปุ่มส่งออก */
-.slip-preview {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 160px;
-  max-height: min(64dvh, 760px);
-  overflow: auto;
-  background: var(--color-soft);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-}
 /* lightbox ของสลิป — ม่านมืดทับทุกอย่าง (รวมแผงขวา) ภาพเต็มความสูงที่เหลือ เลื่อนได้ถ้ายาว */
 .lightbox {
   position: fixed;
@@ -1968,29 +1180,6 @@ dialog.dlg::backdrop {
   justify-content: center;
   overflow: auto;
   padding: var(--space-6) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
-}
-.lightbox-scrim {
-  position: fixed;
-  inset: 0;
-  border: 0;
-  padding: 0;
-  background: var(--color-lightbox);
-  cursor: default;
-}
-.lightbox-close {
-  position: fixed;
-  top: var(--space-4);
-  right: var(--space-4);
-  z-index: 1;
-  background: var(--color-bg);
-}
-.lightbox-body {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  margin: auto 0;
 }
 .lightbox-img {
   width: 360px;
@@ -2032,9 +1221,6 @@ dialog.dlg::backdrop {
   background: var(--color-selection);
   color: transparent;
 }
-.slip-preview .slip-pic {
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
-}
 /* ไอคอนของปุ่มสลิป/ตรวจ — ขาวดำตามระบบ (สีอยู่ในภาพสลิปเท่านั้น) */
 .btn[data-fn] svg {
   width: 18px;
@@ -2065,217 +1251,6 @@ dialog.dlg::backdrop {
 }
 .verdict[data-verdict='unknown'] > svg {
   color: var(--color-muted);
-}
-
-/* ตั้งค่าป้ายบนสลิป — แถวเตี้ยกว่าแถวแหล่งข้อมูล */
-.slip-fields .source {
-  min-height: 44px;
-  padding-left: var(--space-2);
-}
-.slip-fields .source[data-off='true'] .wallet-meta {
-  opacity: 0.5;
-}
-
-/* บัญชี/ข้อมูล: ปุ่มของ Google อยู่ในกล่องของมันเอง, ช่องเลือกไฟล์ซ่อนไว้หลัง <label class="btn"> */
-.gbtn {
-  min-height: 40px;
-}
-.file-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-.avatar {
-  border-radius: 50%;
-  object-fit: cover;
-}
-.stack-tight {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-/* ---------- หน้าตั้งค่า: กลุ่ม + แถว (ชื่อ/คำอธิบายซ้าย ตัวควบคุมขวา) ---------- */
-.set-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.set-group-title {
-  font-size: var(--size-caption);
-  font-weight: var(--weight-book);
-  color: var(--color-muted);
-  letter-spacing: 0;
-}
-.set-rows {
-  display: flex;
-  flex-direction: column;
-}
-.set-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 48px;
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--color-line-subtle);
-}
-.set-rows > .set-row:last-child {
-  border-bottom: 0;
-}
-.set-row-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.set-row-title {
-  font-size: var(--size-input);
-  font-weight: var(--weight-book);
-}
-.set-row-desc {
-  font-size: var(--size-caption);
-  line-height: 1.4;
-  color: var(--color-muted);
-  overflow-wrap: anywhere;
-}
-.set-row-value {
-  flex: none;
-  font-size: var(--size-caption);
-  color: var(--color-muted);
-}
-.set-row .inline {
-  flex: none;
-}
-.set-num {
-  width: 72px;
-  flex: none;
-}
-.set-pass {
-  width: 140px;
-  flex: none;
-}
-
-/* ---------- ลำดับชั้นตัวอักษรในไดอะล็อก (ตามตารางชนิดตัวอักษรของดีไซน์ซิสเต็ม) ----------
- * สร้างลำดับชั้นด้วย ขนาด + น้ำหนัก + ระยะ ไม่ใช่ตัวใหญ่ขึ้นอย่างเดียว
- * ชื่อไดอะล็อก 20/600 · หัวข้อส่วน 17/600 · ป้ายฟิลด์ 14/500 · แถวรายการ 15/500 · คำอธิบาย 13/500 สีจาง
- */
-.dlg h2 {
-  font-size: var(--size-heading-sm);
-  line-height: 1.25;
-}
-.dlg-panel .panel-title {
-  font-size: var(--size-body-lg);
-  line-height: 1.3;
-}
-.dlg .label {
-  font-weight: var(--weight-book);
-}
-.dlg .source .wallet-label {
-  font-size: var(--size-input);
-  font-weight: var(--weight-book);
-}
-/* แถวรายการกระชับขึ้น (แถวปกติ 60px → 48px) โดยระยะยังอยู่บนสเกล 4px */
-.dlg .source {
-  min-height: 48px;
-}
-
-/* ---------- ไดอะล็อกแบบมีแถบหัวข้อ (ตั้งค่า / บัญชี) ---------- */
-/* [open] สำคัญ: display:flex ลอยๆ จะทับค่า display:none ของ dialog ที่ปิดอยู่ แล้วกล่องเปล่าจะไปทับหน้าเว็บ */
-dialog.dlg-wide[open] {
-  width: min(880px, calc(100vw - 2 * var(--space-4)));
-  height: min(640px, calc(100dvh - 2 * var(--space-4)));
-  display: flex;
-  flex-direction: column;
-}
-/* Dialog ห่อเนื้อหาไว้ใน .stack — ต้องยืดเต็มและยอมหดได้ ไม่งั้นพื้นที่เนื้อหาไม่เลื่อนและปุ่มปิดหลุดขอบ */
-.dlg-wide > .stack {
-  flex: 1;
-  min-height: 0;
-}
-.dlg-tabs {
-  display: flex;
-  gap: var(--space-6);
-  min-height: 0;
-  flex: 1;
-}
-.dlg-rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  flex: 0 0 200px;
-  padding-right: var(--space-4);
-  border-right: 1px solid var(--color-line-subtle);
-  overflow-y: auto;
-}
-.tab-item svg {
-  width: 16px;
-  height: 16px;
-  flex: none;
-}
-.tab-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: none;
-  color: var(--color-muted);
-  font: inherit;
-  font-size: var(--size-label);
-  font-weight: var(--weight-regular);
-  line-height: 1.4;
-  text-align: left;
-  cursor: pointer;
-}
-.tab-item:hover {
-  background: var(--color-soft);
-  color: var(--color-ink);
-}
-.tab-item[aria-selected='true'] {
-  background: var(--color-soft);
-  color: var(--color-ink);
-  font-weight: var(--weight-medium);
-}
-.tab-item:focus-visible {
-  outline: 2px solid var(--color-ink);
-  outline-offset: 2px;
-}
-.tab-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dlg-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  min-width: 0;
-  flex: 1;
-  overflow-y: auto;
-  padding-right: var(--space-1);
-}
-@media (max-width: 720px) {
-  .dlg-tabs {
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-  .dlg-rail {
-    flex: 0 0 auto;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0 0 var(--space-2);
-    border-right: 0;
-    border-bottom: 1px solid var(--color-line-subtle);
-  }
-  .tab-item {
-    flex: 0 0 auto;
-  }
 }
 
 /* ---------- กลุ่มกระเป๋า · กระแสเงิน · หน้าโทเคน ---------- */
@@ -2346,61 +1321,12 @@ dialog.dlg-wide[open] {
   gap: var(--space-2);
   margin-inline-start: var(--space-2);
 }
-.menu {
-  position: relative;
-}
-/* ปุ่มเมนูเป็นตัวหนังสือ ไม่ใช่ปุ่มมีกรอบ — บอกสถานะด้วยพื้นอ่อนตอนชี้/เปิดแทน */
-.menu > .btn {
-  gap: var(--space-2);
-  border-color: transparent;
-  background: none;
-  color: var(--color-muted);
-}
-.menu > .btn:hover,
-.menu:hover > .btn,
-.menu:focus-within > .btn {
-  background: var(--color-soft);
-  border-color: transparent;
-  color: var(--color-ink);
-}
-.menu .dd-panel {
-  display: none;
-}
-.menu:hover .dd-panel,
-.menu:focus-within .dd-panel {
-  display: block;
-}
-/* พื้นที่กันเมาส์หลุดระหว่างปุ่มกับแผง (ช่องว่าง 8px) */
-.menu::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  height: var(--space-2);
-}
-.menu .dd-item[aria-selected='true'] {
-  font-weight: var(--weight-medium);
-}
-/* chevron เล็กกว่าไอคอนของปุ่ม — เป็นตัวบอกทิศ ไม่ใช่ไอคอนหลัก */
-.dd-chev {
-  width: 12px;
-  height: 12px;
-}
 /* ตัวเลือกที่มีโลโก้นำหน้า */
 .opt {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-}
-/* แผงเลื่อนได้แต่ไม่โชว์แถบเลื่อน */
-.dd-panel {
-  scrollbar-width: none;
-}
-.dd-panel::-webkit-scrollbar {
-  width: 0;
-  height: 0;
 }
 
 /* ค้นหาทั้งเว็บ — ท้ายแถบบน ไม่ยืดเต็ม และไม่หดจนอ่านไม่ออก */
@@ -2448,9 +1374,6 @@ dialog.dlg-wide[open] {
   font-size: var(--size-caption);
   color: var(--color-tertiary);
 }
-.results .hint {
-  padding: var(--space-3);
-}
 @media (max-width: 1024px) {
   .finder {
     flex-basis: 220px;
@@ -2461,29 +1384,6 @@ dialog.dlg-wide[open] {
     order: 1;
     flex: 1 0 100%;
   }
-}
-
-/* เส้นทางย้อนกลับ */
-.crumbs {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--size-caption);
-  color: var(--color-muted);
-  margin-bottom: var(--space-3);
-}
-.crumbs button {
-  border: 0;
-  background: none;
-  padding: 0;
-  color: var(--color-muted);
-  font: inherit;
-  cursor: pointer;
-}
-.crumbs button:hover {
-  color: var(--color-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 /* หัวการ์ด: ตัวเลขใหญ่ซ้าย ตัวควบคุมขวา */
@@ -2517,22 +1417,6 @@ dialog.dlg-wide[open] {
   align-items: center;
   gap: var(--space-2);
 }
-.btn.btn-inline {
-  min-height: 24px;
-  min-width: 24px;
-  padding: 0;
-  border-color: transparent;
-  background: none;
-  color: var(--color-tertiary);
-}
-.btn.btn-inline:hover {
-  background: var(--color-soft);
-  color: var(--color-ink);
-}
-.btn.btn-inline svg {
-  width: 14px;
-  height: 14px;
-}
 .head-name {
   font-size: var(--size-heading-sm);
 }
@@ -2562,95 +1446,12 @@ dialog.dlg-wide[open] {
   }
 }
 
-/* ช่วงเวลา/ขอบเขต — กลุ่มปุ่มเลือกได้ทีละอัน ไม่มีกรอบรอบกลุ่ม */
-.chips {
-  display: inline-flex;
-  gap: var(--space-1);
-  flex: none;
-}
-.chips button {
-  border: 0;
-  background: none;
-  border-radius: var(--radius-pill);
-  min-height: 28px;
-  padding: 0 var(--space-3);
-  font: var(--weight-book) var(--size-label) / 1.4 var(--font-sans);
-  color: var(--color-muted);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.chips button:hover {
-  color: var(--color-ink);
-}
-.chips button[aria-pressed='true'] {
-  background: var(--color-soft);
-  color: var(--color-ink);
-  font-weight: var(--weight-medium);
-}
-
-/* แท็บของหน้า */
-.ptabs {
-  display: flex;
-  gap: var(--space-6);
-  border-bottom: 1px solid var(--color-line-subtle);
-  margin-top: var(--space-2);
-}
-.ptabs button {
-  border: 0;
-  background: none;
-  padding: var(--space-3) 0;
-  margin-bottom: -1px;
-  border-bottom: 2px solid transparent;
-  color: var(--color-muted);
-  font: var(--weight-book) var(--size-input) / 1.4 var(--font-sans);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.ptabs button:hover {
-  color: var(--color-ink);
-}
-.ptabs button[aria-selected='true'] {
-  color: var(--color-ink);
-  font-weight: var(--weight-medium);
-  border-bottom-color: var(--color-ink);
-}
-.ptabs .n {
-  font-size: var(--size-caption);
-  color: var(--color-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-.ptabs button[aria-selected='true'] .n {
-  color: var(--color-muted);
-}
-
-/* สวิตช์ + ป้าย (กดที่ป้ายก็สลับได้) */
-.switch-field {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.switch-field label {
-  font-size: var(--size-label);
-  color: var(--color-muted);
-  cursor: pointer;
-}
-.switch-field .switch[aria-checked='true'] + label {
-  color: var(--color-ink);
-}
-
 /* แถวคน/โทเคนในตาราง */
 .who {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
-}
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
 }
 .tag {
   display: inline-flex;
@@ -2667,40 +1468,6 @@ dialog.dlg-wide[open] {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-}
-
-/* เม็ดแท็กในไดอะล็อก: ถอดได้ (กากบาทในเม็ด) และเม็ดที่กดเพื่อใส่ */
-.tag-removable {
-  padding-right: var(--space-1);
-}
-.tag-x,
-.tag-pick {
-  border: 0;
-  background: none;
-  color: var(--color-muted);
-  cursor: pointer;
-  font: inherit;
-}
-.tag-x {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: var(--radius-pill);
-}
-.tag-x:hover {
-  background: var(--color-line-subtle);
-  color: var(--color-ink);
-}
-.tag-x svg {
-  width: 12px;
-  height: 12px;
-}
-.tag-pick:hover {
-  color: var(--color-ink);
-  background: var(--color-line-subtle);
-}
-.tag-pick svg {
-  width: 12px;
-  height: 12px;
 }
 .idle {
   color: var(--color-tertiary);
