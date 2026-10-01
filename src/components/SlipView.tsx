@@ -1,11 +1,11 @@
 /** สลิปธุรกรรม — เปิดภาพแบบ lightbox (ม่านมืด + ภาพกลาง + ปิดมุมขวาบน) ไม่ใช่ไดอะล็อก ไม่มีแถบปุ่ม — ผู้ใช้คลิกขวา/ลากภาพเซฟเองแบบรูปทั่วไป */
 import { useEffect, useRef, useState } from 'react';
-import { useModalLayer } from '../modal';
-import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n';
 import { useStore } from '../store';
 import { canvasBlob, renderSlip, saveSlip, slipCode, type SlipAction, type SlipData, type SlipImage, type SlipRecord } from '../slip';
 import { Icon } from './Icon';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Spinner } from '@/components/ui/spinner';
 
 export function useSlipLabels() {
   const { t } = useI18n();
@@ -106,13 +106,13 @@ export function SlipPicture({ img, alt, className }: { img: SlipImage & { url: s
   );
 }
 
-/** lightbox: portal ไป body, z สูงกว่าแผงขวา — Esc / คลิกม่าน ปิด; ล็อกโฟกัสไว้ที่ปุ่มปิด */
-export function SlipLightbox({ data, onClose }: { data: SlipData; onClose: () => void }) {
+/** lightbox สลิป — shadcn Dialog โปร่ง ภาพ 360px กลางจอ; ซ้อนบนแผงขวาได้ (Base UI จัดชั้น/โฟกัส/Esc ให้) */
+export function SlipLightbox({ data, onClose }: { data: SlipData | null; onClose: () => void }) {
   const { t } = useI18n();
-  const box = useRef<HTMLDivElement>(null);
-  useModalLayer(box, true);
   const [rec, setRec] = useState<SlipRecord | null>(null);
   useEffect(() => {
+    setRec(null);
+    if (!data) return;
     let alive = true;
     void slipCode(data).then((code) => {
       if (!alive) return;
@@ -124,27 +124,13 @@ export function SlipLightbox({ data, onClose }: { data: SlipData; onClose: () =>
       alive = false;
     };
   }, [data]);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', onKey, true);
-    return () => document.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
   const img = useSlipImage(rec);
-  return createPortal(
-    <div ref={box} className="lightbox" role="dialog" aria-modal="true" aria-label={t('slip.title')}>
-      <button type="button" className="lightbox-scrim" aria-label={t('dialog.close')} onClick={onClose} />
-      <button type="button" className="btn btn-icon lightbox-close" onClick={onClose} aria-label={t('dialog.close')} autoFocus>
-        <Icon name="x" />
-      </button>
-      <div className="lightbox-body">
-        {img ? <SlipPicture img={img} alt={t('slip.title')} className="lightbox-img" /> : <span className="spinner" aria-hidden="true" />}
-      </div>
-    </div>,
-    document.body
+  return (
+    <Dialog open={data !== null} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="w-auto max-w-[min(360px,calc(100vw-2rem))] bg-transparent p-0 shadow-none ring-0 sm:max-w-[360px]">
+        <DialogTitle className="sr-only">{t('slip.title')}</DialogTitle>
+        <div className="grid min-h-60 place-items-center">{img ? <SlipPicture img={img} alt={t('slip.title')} className="lightbox-img" /> : <Spinner className="size-6 text-primary-foreground" />}</div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,5 +1,5 @@
 /** แผงขวา — รายละเอียดธุรกรรมโครงเดียวกับหน้าอ้างอิง: หัว (ชนิด/เวลา/สถานะ) → สินทรัพย์ → แถวข้อมูล */
-import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useI18n } from '../i18n';
 import type { Move, TxRow } from '../feed';
 import type { Settings, Wallet } from '../store';
@@ -14,8 +14,33 @@ import { slipData, type SlipData } from '../slip';
 import { SlipLightbox } from './SlipView';
 import { protocolKind } from '../kind';
 import { riskReasons } from '../risk';
+import { CheckIcon, ChevronUpIcon, ExternalLinkIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
-export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: TxRow | null; wallets: Wallet[]; chains: ChainMap; settings: Settings; onClose: () => void }) {
+type PanelProps = { row: TxRow | null; wallets: Wallet[]; chains: ChainMap; settings: Settings; onClose: () => void };
+
+/** แผงขวา = shadcn Sheet (มือถือ: เต็มจอจากด้านล่าง); โฟกัส/Esc/ม่าน/inert มาจาก Base UI — ตารางข้างหลังไม่ขยับ */
+export function DetailPanel(props: PanelProps) {
+  const mobile = useIsMobile();
+  /* เก็บแถวล่าสุดไว้ระหว่างแอนิเมชันปิด จะได้ไม่วูบเป็นแผงว่าง */
+  const [last, setLast] = useState<TxRow | null>(props.row);
+  if (props.row && props.row !== last) setLast(props.row);
+  const row = props.row ?? last;
+  return (
+    <Sheet open={props.row !== null} onOpenChange={(o) => !o && props.onClose()}>
+      <SheetContent side={mobile ? 'bottom' : 'right'} className={cn('gap-0', mobile ? 'h-dvh' : 'w-full sm:max-w-[440px]')}>
+        {row && <DetailBody {...props} row={row} />}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function DetailBody({ row, wallets, chains, settings }: PanelProps & { row: TxRow }) {
   /* สลิป: กดปุ่ม Slip → เปิดภาพสลิปแบบ lightbox ทับทุกอย่าง (ไม่ใช่ไดอะล็อก) — เปลี่ยนแถว/ปิดแผงแล้วรีเซ็ต */
   const [slip, setSlip] = useState<SlipData | null>(null);
   useEffect(() => setSlip(null), [row]);
@@ -30,7 +55,6 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
       /* clipboard ถูกบล็อก */
     }
   }
-  const closeBtn = useRef<HTMLButtonElement>(null);
   const [, setTick] = useState(0);
   /* ราคาเป็น USD ของโทเคนในธุรกรรมนี้ — ใช้แคชก่อน แล้วดึงใหม่จาก URL ราคา (ถ้าตั้ง) ทุก 5 นาทีระหว่างเปิดแผง */
   useEffect(() => {
@@ -47,17 +71,6 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
     };
   }, [row, settings.priceUrl]);
 
-  useEffect(() => {
-    if (!row) return;
-    closeBtn.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [row, onClose]);
-
-  if (!row) return null;
   const wallet = wallets.find((w) => w.id === row.walletId);
   const chain = chainOf(chains, row.chain);
   const chainLogo = chain?.logo ?? row.chainLogo ?? null;
@@ -158,31 +171,27 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
   };
 
   return (
-    <aside className="drawer" role="dialog" aria-modal="false" aria-labelledby="dt-h">
-      <div className="drawer-head">
-        <div className="ev-head">
-          <h2 id="dt-h" className="ev-title">
-            {t(`tx.type.${row.type}`)}
-            {row.flagged && (
-              <span className="flag" title={t('tx.scam')}>
-                <Icon name="alert" width={12} height={12} style={{ verticalAlign: '-1px' }} />
-              </span>
-            )}
-          </h2>
-          <span className="ev-sub">
-            <span>{formatStamp(row.time)}</span>
-            <span className="ev-status" data-failed={row.failed}>
-              <Icon name={row.failed ? 'x' : 'check'} />
-              {row.failed ? t('tx.failed') : t('detail.executed')}
-            </span>
-          </span>
-        </div>
-        <button ref={closeBtn} type="button" className="btn btn-icon" onClick={onClose} aria-label={t('dialog.close')}>
-          <Icon name="x" />
-        </button>
-      </div>
+    <>
+      <SheetHeader className="border-b pr-12">
+        <SheetTitle className="flex items-center gap-2 text-lg">
+          {t(`tx.type.${row.type}`)}
+          {row.flagged && (
+            <Badge variant="destructive" title={t('tx.scam')}>
+              <TriangleAlertIcon data-icon="inline-start" />
+              {t('tx.scam')}
+            </Badge>
+          )}
+        </SheetTitle>
+        <SheetDescription className="flex flex-wrap items-center gap-2">
+          <span>{formatStamp(row.time)}</span>
+          <Badge variant={row.failed ? 'destructive' : 'secondary'}>
+            {row.failed ? <XIcon data-icon="inline-start" /> : <CheckIcon data-icon="inline-start" />}
+            {row.failed ? t('tx.failed') : t('detail.executed')}
+          </Badge>
+        </SheetDescription>
+      </SheetHeader>
 
-      <div className="drawer-body">
+      <div className="drawer-body flex-1 overflow-y-auto overscroll-contain">
         {isSwap ? (
           <div className="ev-pair">
             <Asset m={outs[0]!} />
@@ -269,7 +278,7 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
       </div>
 
       {/* ปุ่มเดียวเต็มกว้าง → เมนูลอยขึ้นด้านบน: ดูสลิป / ดูบน explorer */}
-      <div className="drawer-foot">
+      <SheetFooter className="border-t">
         <ViewMenu
           label={t('detail.view')}
           items={[
@@ -293,9 +302,9 @@ export function DetailPanel({ row, wallets, chains, settings, onClose }: { row: 
             txUrl ? { key: 'explorer', label: t('detail.viewOn', { name: explorerName }), href: txUrl } : { key: 'explorer', label: t('detail.noExplorer'), disabled: true },
           ]}
         />
-      </div>
-      {slip && <SlipLightbox data={slip} onClose={() => setSlip(null)} />}
-    </aside>
+      </SheetFooter>
+      <SlipLightbox data={slip} onClose={() => setSlip(null)} />
+    </>
   );
 }
 
@@ -307,68 +316,30 @@ interface ViewItem {
   disabled?: boolean;
 }
 
-/** ปุ่มเดียว + เมนูลอย (เปิดขึ้นด้านบน) — Esc/คลิกนอก ปิด, ลูกศรขึ้นลงเลื่อน, เปิดแล้วโฟกัสรายการแรก */
+/** ปุ่มเดียวเต็มกว้าง + shadcn DropdownMenu เปิดขึ้นด้านบน: ดูสลิป / ดูบน explorer */
 function ViewMenu({ label, items }: { label: string; items: ViewItem[] }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const menuId = useId();
-  const focusables = () => [...(root.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])') ?? [])];
-  useEffect(() => {
-    if (!open) return;
-    focusables()[0]?.focus();
-    const onDoc = (e: MouseEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
-  const close = () => {
-    setOpen(false);
-    trigger.current?.focus();
-  };
-  const onKey = (e: ReactKeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      close();
-    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const list = focusables();
-      const i = list.indexOf(document.activeElement as HTMLElement);
-      list[(i + (e.key === 'ArrowDown' ? 1 : list.length - 1)) % list.length]?.focus();
-    }
-  };
   return (
-    <div className="view-menu" ref={root} onKeyDown={onKey}>
-      {open && (
-        <div className="view-menu-panel" role="menu" id={menuId} aria-label={label}>
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button size="lg" className="w-full" />}>
+        {label}
+        <ChevronUpIcon data-icon="inline-end" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="center" className="w-(--anchor-width)">
+        <DropdownMenuGroup>
           {items.map((it) =>
             it.href ? (
-              <a key={it.key} className="view-menu-item" role="menuitem" href={it.href} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+              <DropdownMenuItem key={it.key} render={<a href={it.href} target="_blank" rel="noopener noreferrer" />}>
                 {it.label}
-              </a>
+                <ExternalLinkIcon className="ml-auto" />
+              </DropdownMenuItem>
             ) : (
-              <button
-                key={it.key}
-                type="button"
-                className="view-menu-item"
-                role="menuitem"
-                aria-disabled={it.disabled || undefined}
-                disabled={it.disabled}
-                onClick={() => {
-                  setOpen(false);
-                  it.onSelect?.();
-                }}
-              >
+              <DropdownMenuItem key={it.key} disabled={it.disabled} onClick={() => it.onSelect?.()}>
                 {it.label}
-              </button>
+              </DropdownMenuItem>
             ),
           )}
-        </div>
-      )}
-      <button ref={trigger} type="button" className="btn btn-primary" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen(!open)}>
-        {label}
-      </button>
-    </div>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

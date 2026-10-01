@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from './i18n';
 import { useStore } from './store';
 import { endpointsFor, hasOlder, useFeed } from './useFeed';
 import { XCapMark } from './components/XCapMark';
-import { Icon } from './components/Icon';
+import { DatabaseIcon, SettingsIcon, ShieldCheckIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { ImportDialog } from './components/ImportDialog';
 import { DetailPanel } from './components/DetailPanel';
 import type { TxRow } from './feed';
@@ -14,7 +17,6 @@ import { VerifyDialog } from './components/VerifyDialog';
 import { parseShare } from './slip';
 import { LangMenu } from './components/LangMenu';
 import { ThemeToggle } from './components/ThemeToggle';
-import { useModalLayer } from './modal';
 import { setProxy } from './proxy';
 import { navigate, useOpenParam, useRoute } from './router';
 import { lastTime } from './flow';
@@ -189,13 +191,14 @@ export function App() {
 
   const errorList =
     errors.length > 0 ? (
-      <div className="field" aria-live="polite">
-        {[...new Set(errors.map(errMsg))].map((m) => (
-          <span key={m} className="error">
-            {m}
-          </span>
-        ))}
-      </div>
+      <Alert variant="destructive" aria-live="polite">
+        <TriangleAlertIcon />
+        <AlertDescription className="flex flex-col gap-1">
+          {[...new Set(errors.map(errMsg))].map((m) => (
+            <span key={m}>{m}</span>
+          ))}
+        </AlertDescription>
+      </Alert>
     ) : null;
 
   return (
@@ -210,19 +213,19 @@ export function App() {
         </button>
         {page !== 'dashboard' && <GroupMenubar wallets={wallets} infoOf={infoOf} group={group} onChange={setGroup} chains={chains} />}
         <span className="top-spacer" />
-        <button type="button" className="btn btn-primary" onClick={() => openDialog('import')}>
-          <Icon name="upload" />
+        <Button onClick={() => openDialog('import')}>
+          <UploadIcon data-icon="inline-start" />
           {t('wallets.import')}
-        </button>
-        <span className="top-status" data-ok={hasEndpoint}>
+        </Button>
+        <Badge variant={hasEndpoint ? 'secondary' : 'outline'} className="top-status">
           {hasEndpoint ? t('status.endpointSet', { n: enabledEps.length }) : t('status.noEndpoint')}
-        </span>
-        <button type="button" className="btn btn-icon" data-fn="verify" onClick={() => setVerifyOpen(true)} aria-label={t('slip.verify')} title={t('slip.verify')}>
-          <Icon name="shield" />
-        </button>
-        <button type="button" className="btn btn-icon" onClick={() => openDialog('settings')} aria-label={t('nav.settings')} title={t('nav.settings')}>
-          <Icon name="settings" />
-        </button>
+        </Badge>
+        <Button variant="ghost" size="icon" onClick={() => setVerifyOpen(true)} aria-label={t('slip.verify')} title={t('slip.verify')}>
+          <ShieldCheckIcon />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => openDialog('settings')} aria-label={t('nav.settings')} title={t('nav.settings')}>
+          <SettingsIcon />
+        </Button>
         <ThemeToggle />
         <LangMenu />
         <Finder wallets={wallets} rows={rows} chains={chains} onWallet={(id) => openWallet(id)} onToken={openToken} />
@@ -231,12 +234,17 @@ export function App() {
       <div className="layout">
         <main id="main" className="main">
           {!hasEndpoint ? (
-            <div className="empty">
-              <h2>{t('tx.emptyEndpoint')}</h2>
-              <button type="button" className="btn btn-primary" onClick={() => openDialog('settings')}>
-                {t('nav.settings')}
-              </button>
-            </div>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <DatabaseIcon />
+                </EmptyMedia>
+                <EmptyTitle>{t('tx.emptyEndpoint')}</EmptyTitle>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={() => openDialog('settings')}>{t('nav.settings')}</Button>
+              </EmptyContent>
+            </Empty>
           ) : page === 'dashboard' ? (
             <div className="stack-lg">
               {errorList}
@@ -322,25 +330,7 @@ export function App() {
         }}
         seen={(h) => rows.some((r) => r.hash === h)}
       />
-      {/* แผงขวา + ม่าน: portal ไป body — เป็น sibling ของทั้งหน้า ไม่อยู่ในกล่องตาราง จึงไม่ดันตาราง */}
-      {createPortal(
-        <DrawerLayer active={selected !== null}>
-          {selected !== null && <button type="button" className="drawer-scrim" aria-label={t('dialog.close')} onClick={closeDetail} />}
-          <DetailPanel row={selected} wallets={wallets} chains={chains} settings={settings} onClose={closeDetail} />
-        </DrawerLayer>,
-        document.body,
-      )}
+      <DetailPanel row={selected} wallets={wallets} chains={chains} settings={settings} onClose={closeDetail} />
     </>
-  );
-}
-
-/* กล่องชั้นของแผงขวา (ม่าน + แผง) — เปิดแล้วส่วนอื่นของหน้า inert; ปิดแล้วเป็น div ว่างที่ไม่กินที่ */
-function DrawerLayer({ active, children }: { active: boolean; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useModalLayer(ref, active);
-  return (
-    <div ref={ref} className="drawer-layer" data-active={active}>
-      {children}
-    </div>
   );
 }

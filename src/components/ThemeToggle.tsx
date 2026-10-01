@@ -1,24 +1,20 @@
-/** สลับธีม — segmented control ทรง pill สองช่อง (สว่าง/มืด) */
+/** สลับธีม — shadcn ToggleGroup สองช่อง (สว่าง/มืด) */
+import { MoonIcon, SunIcon } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { useTheme, type Theme } from '../theme';
-import { Icon } from './Icon';
-
-const OPTIONS: Array<{ value: Theme; icon: 'sun' | 'moon'; key: 'theme.light' | 'theme.dark' }> = [
-  { value: 'light', icon: 'sun', key: 'theme.light' },
-  { value: 'dark', icon: 'moon', key: 'theme.dark' },
-];
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export function ThemeToggle() {
   const { t } = useI18n();
   const [theme, setTheme] = useTheme();
   return (
-    <div className="seg" role="radiogroup" aria-label={t('theme.label')}>
-      {OPTIONS.map((o) => (
-        <button key={o.value} type="button" role="radio" aria-checked={theme === o.value} className="seg-item" onClick={() => setTheme(o.value)} title={t(o.key)}>
-          <Icon name={o.icon} />
-          <span>{t(o.key)}</span>
-        </button>
-      ))}
-    </div>
+    <ToggleGroup variant="outline" size="sm" value={[theme]} onValueChange={(v: string[]) => v[0] && setTheme(v[0] as Theme)} aria-label={t('theme.label')}>
+      <ToggleGroupItem value="light" title={t('theme.light')} aria-label={t('theme.light')}>
+        <SunIcon />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="dark" title={t('theme.dark')} aria-label={t('theme.dark')}>
+        <MoonIcon />
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 }

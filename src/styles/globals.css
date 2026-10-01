@@ -2,6 +2,9 @@
  * shadcn/ui (base-nova) — แหล่งความจริงของสี/รัศมี/ฟอนต์ ตามกติกา .agents/skills/shadcn
  * ธีมมืดสลับด้วย data-theme บน <html> (src/theme.ts) — ใช้โทเคน semantic เท่านั้น ห้ามสีดิบในคอมโพเนนต์
  */
+/* ลำดับชั้น: CSS เดิม (legacy) อยู่ใต้ components/utilities ของ Tailwind — คลาส shadcn ชนะ CSS เก่าเสมอ */
+@layer theme, base, legacy, components, utilities;
+@import './app.css' layer(legacy);
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
