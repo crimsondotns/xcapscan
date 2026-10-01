@@ -173,7 +173,6 @@ export function Finder({ wallets, rows, chains, onWallet, onToken }: { wallets: 
         id="finder"
         name="find"
         type="search"
-        placeholder={t('find.placeholder')}
         value={q}
         autoComplete="off"
         spellCheck={false}

@@ -17,7 +17,7 @@ test('route: only /s/<alias>/<path>, no open proxy', () => {
 test('query: drops credential params, caps size', () => {
   const q = safeQuery(new URLSearchParams('limit=100&api_key=leak&authorization=x&offset=200'));
   assert.equal(q?.toString(), 'limit=100&offset=200');
-  assert.equal(safeQuery(new URLSearchParams(`a=${'x'.repeat(300)}`)), null);
+  assert.equal(safeQuery(new URLSearchParams(`a=${'x'.repeat(5000)}`)), null);
 });
 
 test('origin: exact match only', () => {

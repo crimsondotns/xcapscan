@@ -165,7 +165,7 @@ export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch
           <InputGroupAddon>
             <SearchIcon />
           </InputGroupAddon>
-          <InputGroupInput id="wallet-q" name="wq" type="search" placeholder={t('tx.search')} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
+          <InputGroupInput id="wallet-q" name="wq" type="search" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
         </InputGroup>
         <div className="row-actions">
           <Button type="button" variant="outline" onClick={() => setAdding(true)}>

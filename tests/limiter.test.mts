@@ -16,13 +16,15 @@ const fake = (status: number, retryAfter: string | null = null) => {
   return res;
 };
 
-test('429 is retried after a pause; caller only sees the final response', async () => {
-  setLimiterTiming({ reset: true });
+test('429 is returned at once (no auto-retry) and pauses the whole queue', async () => {
+  setLimiterTiming({ reset: true, basePauseMs: 50 });
   let calls = 0;
   (globalThis as { fetch: unknown }).fetch = async () => fake(++calls < 3 ? 429 : 200);
   const res = await limitedFetch('https://x.invalid/a');
-  assert.equal(res.status, 200);
-  assert.equal(calls, 3);
+  assert.equal(res.status, 429);
+  assert.equal(calls, 1, 'ไม่ยิงซ้ำเอง');
+  assert.ok(pausedFor() > 0, 'คิวถูกพัก');
+  setLimiterTiming({ reset: true, basePauseMs: 10 });
 });
 
 test('concurrency is capped at 2', async () => {
@@ -60,7 +62,7 @@ test('โดน 429 แล้วบีบท่อ: เหลือทีละ 
   setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 2 });
   (globalThis as { fetch: unknown }).fetch = async () => fake(429);
   const res = await limitedFetch('https://x.invalid/blocked');
-  assert.equal(res.status, 429, 'ครบจำนวนแล้วยังไม่ผ่าน → คืน 429 ให้ผู้เรียกตัดสินใจ');
+  assert.equal(res.status, 429, 'คืน 429 ให้ผู้เรียกตัดสินใจ');
 
   let inFlight = 0;
   let peak = 0;

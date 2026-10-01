@@ -7,11 +7,11 @@ import { fallbackProxy } from './proxy';
  * - โดน 429 → หยุด "ทั้งคิว" (ตาม Retry-After ถ้ามี ไม่มีก็ 5s แล้วเพิ่มเป็น 2 เท่า สูงสุด 60s)
  *   พร้อม "บีบท่อ" ลงเหลือ 1 คำขอต่อครั้งและถ่างระยะห่างขึ้น แล้วค่อยๆ คลายเมื่อสำเร็จติดกันหลายครั้ง
  *   (แหล่งข้อมูลส่วนใหญ่ไม่ได้ดูแค่จำนวนคำขอ แต่ดูความถี่ด้วย ยิงถี่ตอนเพิ่งโดนแบนคือต่ออายุแบนให้ตัวเอง)
- * - ลองซ้ำให้เองสูงสุด 3 ครั้ง จึงไม่ต้องให้ผู้ใช้เห็น "HTTP 429" ยกเว้นแหล่งบล็อกยาวจริงๆ
+ * - ไม่ยิงซ้ำเอง (ผู้ใช้ 2026-10-01): คืน 429 ให้ผู้เรียกทันที — ยิงซ้ำตอนโดนแบนคือต่ออายุแบน;
+ *   UI โชว์เวลานับถอยหลังจาก pausedFor() แล้วให้ผู้ใช้กดโหลดต่อเอง
  * - ซิงก์เวลาพักข้ามแท็บผ่าน localStorage — เปิดแท็บใหม่ระหว่างที่แท็บอื่นพักอยู่ จะไม่ยิงซ้ำ
  */
 const MAX_CONCURRENCY = 2;
-const MAX_RETRY = 3;
 /** สำเร็จติดกันกี่ครั้งถึงคลายท่อขึ้นหนึ่งขั้น */
 const RECOVER_AFTER = 6;
 let GAP_MS = 500;
@@ -136,7 +136,11 @@ async function run(url: string, init?: RequestInit): Promise<Response> {
   await acquire();
   try {
     try {
-      return await fetch(url, init);
+      const res = await fetch(url, init);
+      if (res.status === 429) {
+        if (pausedFor() === 0) backoff(res.headers.get('retry-after'));
+      } else if (res.ok) loosen();
+      return res;
     } catch (e) {
       // ยิงตรงโดน CORS/เครือข่ายบล็อก → ลองผ่าน proxy ของ dev (ถ้ามี) ก่อนยอมแพ้
       const alt = fallbackProxy(url);
@@ -148,7 +152,7 @@ async function run(url: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-/** ยิงผ่านคิว; 429 → รอแล้วยิงซ้ำให้เอง (คืน Response 429 สุดท้ายถ้ายังไม่ผ่านหลังครบจำนวน) */
+/** ยิงผ่านคิว; 429 → พักทั้งคิว + บีบท่อ แล้วคืน 429 ให้ผู้เรียกทันที (ไม่ยิงซ้ำเอง) */
 export async function limitedFetch(url: string, init?: RequestInit): Promise<Response> {
   // มีแต่คำขออ่านอย่างเดียวในแอปนี้ คำขอที่ URL+header เหมือนกันจึงใช้ผลร่วมกันได้
   const key = `${url}|${JSON.stringify(init?.headers ?? {})}`;

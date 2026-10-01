@@ -206,7 +206,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
           <InputGroupAddon>
             <SearchIcon />
           </InputGroupAddon>
-          <InputGroupInput id="tx-q" name="q" type="search" placeholder={t('tx.search')} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
+          <InputGroupInput id="tx-q" name="q" type="search" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
         </InputGroup>
         <Dropdown value={wallet} onChange={onWallet} label={t('tx.col.wallet')} options={[{ value: '', label: t('tx.allWallets') }, ...wallets.map((w) => ({ value: w.id, label: w.label }))]} />
         <Dropdown

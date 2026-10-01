@@ -63,7 +63,7 @@ export function TagDialog({ open, wallet, onClose }: { open: boolean; wallet: Wa
           <Field>
             <FieldLabel htmlFor="tag-new">{t('tags.add')}</FieldLabel>
             <div className="flex gap-2">
-              <Input id="tag-new" name="tag" value={draft} placeholder={t('tags.placeholder')} onChange={(e) => setDraft(e.target.value)} autoComplete="off" maxLength={MAX_LEN} />
+              <Input id="tag-new" name="tag" value={draft} onChange={(e) => setDraft(e.target.value)} autoComplete="off" maxLength={MAX_LEN} />
               <Button type="submit" variant="outline" disabled={draft.trim() === '' || tags.includes(draft.trim())}>
                 <PlusIcon data-icon="inline-start" />
                 {t('tags.addBtn')}
