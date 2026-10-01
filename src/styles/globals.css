@@ -115,3 +115,20 @@ th.num > [data-slot='button'] {
 [data-slot='scroll-area-scrollbar'] {
   display: none;
 }
+
+/* เลื่อนในแผง/รายการลอยจนสุดแล้ว ต้องไม่ลามไปเลื่อนหน้าหลัก (ผู้ใช้ 2026-10-01)
+   ตั้งที่ทุกกล่องที่เลื่อนได้ในชั้นลอย + ตัวหน้าเอง (กล่องที่เลื่อนไม่ได้ไม่มีผล) */
+[data-slot='select-content'],
+[data-slot='popover-content'],
+[data-slot='popover-content'] *,
+[data-slot='command-list'],
+[data-slot='dropdown-menu-content'],
+[data-slot='context-menu-content'],
+[data-slot='sheet-content'],
+[data-slot='sheet-content'] *,
+[data-slot='drawer-content'],
+[data-slot='drawer-content'] *,
+[data-slot='dialog-content'],
+[data-slot='dialog-content'] * {
+  overscroll-behavior: contain;
+}

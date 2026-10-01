@@ -368,7 +368,7 @@ export function AdvancedFilterButton({ value, onChange, rows, countFor }: { valu
     );
 
   return (
-    <Popover open={open} onOpenChange={openWith}>
+    <Popover open={open} onOpenChange={openWith} modal>
       <PopoverTrigger render={trigger} />
       <PopoverContent align="start" sideOffset={8} className="w-[560px] max-w-[calc(100vw-2rem)] gap-4 p-5">
         <PopoverHeader className="flex-row items-center justify-between">{head(PopoverTitle)}</PopoverHeader>
