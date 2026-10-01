@@ -18,7 +18,7 @@ Stack (migrated 2026-10-01): Tailwind 4 + shadcn `base-nova` on Base UI (`compon
 
 ## Responsive (user spec, 2026-09-21)
 
-Breakpoints: mobile < 640, tablet 640–1024, desktop > 1024. Tokens in `tokens.css` switch per breakpoint: body 14px below 1024 / 16px above; section spacing 12 / 16 / 24; controls 48px / 40px / 40px. Mobile: single column, full-width inputs, wallet-group rail becomes one full-width Select (sections Tags / Chains, user 2026-10-01), transaction table shows 2 columns (Type · Amount), fits the screen, no sideways scroll (user, 2026-10-01), dialogs are full-width bottom sheets, detail panel a bottom Drawer capped at 92dvh; every Drawer shows a swipe handle and drags down to close (user 2026-10-01). Tablet: wallets panel collapsible via the header toggle, panel 80% width. Desktop: sticky wallets panel, all columns. `html, body { overflow-x: clip }` (never `hidden` — that makes body a scroll container and breaks every sticky element) — nothing may scroll the page sideways. Table header sticks under the 64px site header on wide screens; below 1024px the table scrolls inside its wrapper instead.
+Breakpoints: mobile < 640, tablet 640–1024, desktop > 1024. Tokens in `tokens.css` switch per breakpoint: body 14px below 1024 / 16px above; section spacing 12 / 16 / 24; controls 48px / 40px / 40px. Mobile: single column, full-width inputs, wallet groups open from a hamburger button at the left of the header as a left Sheet (sections Tags / Chains; the rail is hidden — user 2026-10-01), transaction table shows 2 columns (Type · Amount), fits the screen, no sideways scroll (user, 2026-10-01), dialogs are full-width bottom sheets, detail panel a bottom Drawer capped at 92dvh; every Drawer shows a swipe handle and drags down to close (user 2026-10-01). Tablet: wallets panel collapsible via the header toggle, panel 80% width. Desktop: sticky wallets panel, all columns. `html, body { overflow-x: clip }` (never `hidden` — that makes body a scroll container and breaks every sticky element) — nothing may scroll the page sideways. Table header sticks under the 64px site header on wide screens; below 1024px the table scrolls inside its wrapper instead.
 
 ## Transaction table (user spec, 2026-09-21)
 
@@ -71,7 +71,7 @@ Do not declare work done while any of these is red.
 ## Skeleton / header (2026-09-22)
 
 - `components/Skeleton.tsx` (ห่อ shadcn `Skeleton`): `SkeletonRows` (แถวสูง 64px เท่าแถวจริง) ใช้ในตารางธุรกรรมตอนโหลดครั้งแรก, `SkeletonBar` ในช่องของตารางกระเป๋าตอนกระเป๋านั้นโหลด
-- ปุ่ม Import file อยู่ที่หัวเว็บ (XCap · Import · Settings); ตารางกระเป๋ามี Add/Clear
+- ปุ่ม Import file อยู่ที่หัวตารางกระเป๋า คู่กับ Add/Clear (ย้ายออกจากหัวเว็บ ผู้ใช้ 2026-10-01)
 - หัวคอลัมน์ตาราง padding 16px แนวตั้ง, เซลล์ 12px
 
 ## แผงขวา + Settings (2026-09-22)

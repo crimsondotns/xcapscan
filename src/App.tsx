@@ -3,7 +3,7 @@ import { useI18n } from './i18n';
 import { useStore } from './store';
 import { bulkCount, endpointsFor, hasOlder, seeksByTime, useFeed } from './useFeed';
 import { XCapMark } from './components/XCapMark';
-import { DatabaseIcon, SettingsIcon, ShieldCheckIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react';
+import { DatabaseIcon, SettingsIcon, ShieldCheckIcon, TriangleAlertIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
@@ -20,7 +20,7 @@ import { setProxy } from './proxy';
 import { navigate, useOpenParam, useRoute } from './router';
 import { lastTime } from './flow';
 import { groupExists, matchesGroup, type GroupId } from './groups';
-import { GroupMenubar } from './components/GroupNav';
+import { GroupDrawer, GroupMenubar } from './components/GroupNav';
 import { Finder } from './components/Finder';
 import { Dashboard } from './pages/Dashboard';
 import { WalletPage } from './pages/WalletPage';
@@ -206,16 +206,15 @@ export function App() {
         {t('nav.skip')}
       </a>
       <header className="top flex-wrap gap-2 py-2 sm:gap-3">
+        <div className="sm:hidden">
+          <GroupDrawer wallets={wallets} infoOf={infoOf} group={group} onChange={setGroup} chains={chains} />
+        </div>
         <button type="button" className="brand" onClick={goDashboard} aria-label={t('nav.dashboard')}>
           <XCapMark />
           {t('app.name')} <span className="brand-sub">{t('app.sub')}</span>
         </button>
         {page !== 'dashboard' && <div className="hidden md:flex"><GroupMenubar wallets={wallets} infoOf={infoOf} group={group} onChange={setGroup} chains={chains} /></div>}
         <span className="top-spacer" />
-        <Button onClick={() => openDialog('import')} aria-label={t('wallets.import')}>
-          <UploadIcon data-icon="inline-start" />
-          <span className="hidden sm:inline">{t('wallets.import')}</span>
-        </Button>
         <Button variant="ghost" size="icon" onClick={() => setVerifyOpen(true)} aria-label={t('slip.verify')} title={t('slip.verify')}>
           <ShieldCheckIcon />
         </Button>
@@ -258,6 +257,7 @@ export function App() {
                 onOpenWallet={openWallet}
                 onSwitch={selectWallet}
                 onRemove={forget}
+                onImport={() => openDialog('import')}
                 hasSource={(w) => endpointsFor(w, settings).length > 0}
                 onLoadGroup={loadGroup}
                 loading={anyLoading}

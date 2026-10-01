@@ -9,9 +9,10 @@ import type { Family, Wallet } from '../store';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useState } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, MenuIcon } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export interface GroupNavProps {
@@ -74,7 +75,7 @@ export function GroupRail(props: GroupNavProps) {
   const { t } = useI18n();
   const { fixed, tags, families } = useSections(props);
   const mobile = useIsMobile();
-  if (mobile) return <GroupSelect {...props} sections={{ fixed, tags, families }} />;
+  if (mobile) return null; // มือถือ: กลุ่มอยู่ในแผงซ้ายจากปุ่ม hamburger บนหัวเว็บ (GroupDrawer)
   const btn = (item: Item) => (
     <button key={item.id} type="button" aria-selected={props.group === item.id} onClick={() => props.onChange(item.id)}>
       <ItemLabel item={item} />
@@ -88,57 +89,6 @@ export function GroupRail(props: GroupNavProps) {
       {tags.map(btn)}
       {families.length > 1 && <div className="rail-head">{t('group.chains')}</div>}
       {families.length > 1 && families.map(btn)}
-    </nav>
-  );
-}
-
-/** มือถือ (ผู้ใช้ 2026-10-01): แถบซ้ายเป็น dropdown เดียว แบ่งหมวด Tags / Chains */
-function GroupSelect({ group, onChange, sections }: GroupNavProps & { sections: { fixed: Item[]; tags: Item[]; families: Item[] } }) {
-  const { t } = useI18n();
-  const { fixed, tags, families } = sections;
-  const all = [...fixed, ...tags, ...families];
-  const current = all.find((i) => i.id === group) ?? fixed[0]!;
-  const opt = (item: Item) => (
-    <SelectItem key={item.id} value={item.id}>
-      <ItemLabel item={item} />
-      <span className="ml-auto text-muted-foreground tabular-nums">{item.count}</span>
-    </SelectItem>
-  );
-  return (
-    <nav aria-label={t('group.nav')}>
-      <Select value={group} onValueChange={(v) => v != null && onChange(v as GroupId)}>
-        <SelectTrigger aria-label={t('group.nav')} className="w-full">
-          <SelectValue>
-            {() => (
-              <>
-                <ItemLabel item={current} />
-                <span className="ml-auto text-muted-foreground tabular-nums">{current.count}</span>
-              </>
-            )}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
-          <SelectGroup>{fixed.map(opt)}</SelectGroup>
-          {tags.length > 0 && (
-            <>
-              <SelectSeparator />
-              <SelectGroup>
-                <SelectLabel>{t('group.tags')}</SelectLabel>
-                {tags.map(opt)}
-              </SelectGroup>
-            </>
-          )}
-          {families.length > 1 && (
-            <>
-              <SelectSeparator />
-              <SelectGroup>
-                <SelectLabel>{t('group.chains')}</SelectLabel>
-                {families.map(opt)}
-              </SelectGroup>
-            </>
-          )}
-        </SelectContent>
-      </Select>
     </nav>
   );
 }
@@ -177,5 +127,48 @@ export function GroupMenubar(props: GroupNavProps) {
       <Menu label={t('group.tags')} items={tags} group={props.group} onChange={props.onChange} />
       {families.length > 1 && <Menu label={t('group.chains')} items={families} group={props.group} onChange={props.onChange} />}
     </nav>
+  );
+}
+
+/** มือถือ (ผู้ใช้ 2026-10-01): ปุ่ม hamburger บนหัวเว็บ → แผงซ้ายรายการกลุ่ม (เนื้อหาเดียวกับแถบซ้าย) เลือกแล้วปิดเอง */
+export function GroupDrawer(props: GroupNavProps) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const { fixed, tags, families } = useSections(props);
+  const btn = (item: Item) => (
+    <Button
+      key={item.id}
+      type="button"
+      variant={props.group === item.id ? 'secondary' : 'ghost'}
+      aria-current={props.group === item.id ? 'page' : undefined}
+      className="w-full justify-start"
+      onClick={() => {
+        props.onChange(item.id);
+        setOpen(false);
+      }}
+    >
+      <ItemLabel item={item} />
+      <span className="ml-auto text-muted-foreground tabular-nums">{item.count}</span>
+    </Button>
+  );
+  const head = (label: string) => <div className="px-2.5 pt-4 pb-1 text-xs text-muted-foreground">{label}</div>;
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger render={<Button type="button" variant="ghost" size="icon" aria-label={t('group.nav')} />}>
+        <MenuIcon />
+      </SheetTrigger>
+      <SheetContent side="left" className="w-[min(80vw,320px)] gap-0">
+        <SheetHeader className="border-b">
+          <SheetTitle>{t('group.nav')}</SheetTitle>
+        </SheetHeader>
+        <nav aria-label={t('group.nav')} className="flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-2">
+          {fixed.map(btn)}
+          {tags.length > 0 && head(t('group.tags'))}
+          {tags.map(btn)}
+          {families.length > 1 && head(t('group.chains'))}
+          {families.length > 1 && families.map(btn)}
+        </nav>
+      </SheetContent>
+    </Sheet>
   );
 }

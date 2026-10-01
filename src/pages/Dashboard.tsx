@@ -21,7 +21,7 @@ import { SkeletonBar } from '../components/Skeleton';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 
-export function Dashboard({ all, wallets, rows, feeds, chains, group, onGroup, infoOf, range, onRange, onOpenWallet, onSwitch, onRemove, hasSource, onLoadGroup, loading, progress, onCancel, selected, onSelect }: { all: Wallet[]; wallets: Wallet[]; rows: TxRow[]; feeds: Record<string, WalletFeed>; chains: ChainMap; group: GroupId; onGroup: (g: GroupId) => void; infoOf: (w: Wallet) => WalletInfo; range: Range; onRange: (r: Range) => void; onOpenWallet: (id: string) => void; onSwitch: (id: string | null) => void; onRemove: (id: string) => void; hasSource: (w: Wallet) => boolean; onLoadGroup: () => void; loading: boolean; progress: Progress; onCancel: () => void; selected: string | null; onSelect: (r: TxRow) => void }) {
+export function Dashboard({ all, wallets, rows, feeds, chains, group, onGroup, infoOf, range, onRange, onOpenWallet, onSwitch, onRemove, onImport, hasSource, onLoadGroup, loading, progress, onCancel, selected, onSelect }: { all: Wallet[]; wallets: Wallet[]; rows: TxRow[]; feeds: Record<string, WalletFeed>; chains: ChainMap; group: GroupId; onGroup: (g: GroupId) => void; infoOf: (w: Wallet) => WalletInfo; range: Range; onRange: (r: Range) => void; onOpenWallet: (id: string) => void; onSwitch: (id: string | null) => void; onRemove: (id: string) => void; onImport: () => void; hasSource: (w: Wallet) => boolean; onLoadGroup: () => void; loading: boolean; progress: Progress; onCancel: () => void; selected: string | null; onSelect: (r: TxRow) => void }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<'wallets' | 'recent'>('wallets');
   const label = useGroupLabel(all, group);
@@ -86,7 +86,7 @@ export function Dashboard({ all, wallets, rows, feeds, chains, group, onGroup, i
           ]}
         />
         {tab === 'wallets' ? (
-          <WalletTable wallets={wallets} feeds={feeds} chains={chains} activeId={null} onOpen={onOpenWallet} onSwitch={onSwitch} onRemove={onRemove} hasSource={hasSource} />
+          <WalletTable wallets={wallets} feeds={feeds} chains={chains} activeId={null} onOpen={onOpenWallet} onSwitch={onSwitch} onRemove={onRemove} onImport={onImport} hasSource={hasSource} />
         ) : (
           <RecentTable rows={rows} wallets={all} chains={chains} selected={selected} onSelect={onSelect} loading={loading} />
         )}

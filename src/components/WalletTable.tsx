@@ -13,6 +13,7 @@ import { SkeletonBar } from './Skeleton';
 import { useStickyHead } from '../useStickyHead';
 import { Logo } from './Logo';
 import { chainOf, type ChainInfo, type ChainMap } from '../chains';
+import { UploadIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SearchIcon } from 'lucide-react';
@@ -84,7 +85,7 @@ function WalletMarks({ family, chainIds, chains }: { family: string; chainIds: s
  * คลิกแถว = ไปหน้ากระเป๋า; หัวคอลัมน์เรียงได้; แสดงทีละ 20 แถว เลื่อนลงแล้วเพิ่มเอง
  * ถังขยะ = ยืนยันก่อนลบ
  */
-export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch, onRemove, hasSource }: { wallets: Wallet[]; feeds: Record<string, WalletFeed>; chains: ChainMap; activeId: string | null; onOpen: (id: string) => void; onSwitch: (id: string | null) => void; onRemove: (id: string) => void; hasSource: (w: Wallet) => boolean }) {
+export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch, onRemove, onImport, hasSource }: { wallets: Wallet[]; feeds: Record<string, WalletFeed>; chains: ChainMap; activeId: string | null; onOpen: (id: string) => void; onSwitch: (id: string | null) => void; onRemove: (id: string) => void; onImport?: () => void; hasSource: (w: Wallet) => boolean }) {
   const { t } = useI18n();
   const { wallets: all, removeWallet, clearWallets } = useStore();
   const [adding, setAdding] = useState(false);
@@ -172,6 +173,13 @@ export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch
             <Icon name="plus" />
             {t('wallets.add')}
           </Button>
+          {/* นำเข้าไฟล์ย้ายมาจากหัวเว็บ (ผู้ใช้ 2026-10-01) */}
+          {onImport && (
+            <Button type="button" variant="outline" onClick={onImport}>
+              <UploadIcon data-icon="inline-start" />
+              {t('wallets.import')}
+            </Button>
+          )}
           {all.length > 0 && (
             <Button type="button" variant="ghost" size="icon" onClick={clear} aria-label={t('wallets.clear')} title={t('wallets.clear')}>
               <Icon name="trash" />
