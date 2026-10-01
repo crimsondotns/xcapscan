@@ -10,6 +10,7 @@ import type { TxRow } from '../feed';
 import { useI18n } from '../i18n';
 import { formatDayShort, formatUsdCompact, formatUsdExact } from '../format';
 import { SkeletonBar, SkeletonBlock } from './Skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export const RANGES = [7, 30, 90] as const;
 export type Range = (typeof RANGES)[number];
@@ -17,13 +18,13 @@ export type Range = (typeof RANGES)[number];
 export function RangeChips({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
   const { t } = useI18n();
   return (
-    <span className="chips" role="group" aria-label={t('flow.rangeLabel')}>
+    <ToggleGroup variant="outline" size="sm" value={[String(value)]} onValueChange={(v: string[]) => v[0] && onChange(Number(v[0]) as Range)} aria-label={t('flow.rangeLabel')}>
       {RANGES.map((r) => (
-        <button key={r} type="button" aria-pressed={r === value} onClick={() => onChange(r)}>
+        <ToggleGroupItem key={r} value={String(r)}>
           {t('flow.range', { n: r })}
-        </button>
+        </ToggleGroupItem>
       ))}
-    </span>
+    </ToggleGroup>
   );
 }
 
@@ -139,7 +140,7 @@ export function FlowChart({ rows, days, height = 250, loading = false }: { rows:
 export function Stat({ label, value, tone, sub, loading = false }: { label: string; value: string; tone?: string; sub?: string; loading?: boolean }) {
   return (
     <div className="stat">
-      <span className="hint">{label}</span>
+      <span className="text-sm text-muted-foreground">{label}</span>
       {loading ? (
         <b>
           <SkeletonBar width={96} height={18} />
@@ -147,7 +148,7 @@ export function Stat({ label, value, tone, sub, loading = false }: { label: stri
       ) : (
         <b className={tone}>{value}</b>
       )}
-      {sub !== undefined && <span className="hint">{loading ? <SkeletonBar width={64} /> : sub}</span>}
+      {sub !== undefined && <span className="text-sm text-muted-foreground">{loading ? <SkeletonBar width={64} /> : sub}</span>}
     </div>
   );
 }

@@ -59,3 +59,21 @@
     @apply font-sans;
   }
 }
+
+/* คอลัมน์ตัวเลข: หัวคอลัมน์ชิดขวาให้ตรงกับเซลล์ (ไม่มี layer — ชนะ text-left ของ TableHead) */
+th.num,
+th.num > [data-slot='button'] {
+  text-align: right;
+  justify-content: flex-end;
+}
+th.num > [data-slot='button'] {
+  margin-left: auto;
+  margin-right: -0.625rem;
+}
+
+/* ต่ำกว่า 1024px ตารางเลื่อนในกล่องของมันเอง — หัวคอลัมน์ไม่ติดหน้าจอ (sticky ในกล่อง overflow จะเลื่อนหัวทับแถวแรก) */
+@media (max-width: 1023px) {
+  .tx th {
+    position: static;
+  }
+}

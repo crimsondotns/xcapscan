@@ -9,6 +9,7 @@ import { Logo } from './Logo';
 import { Identicon } from './Identicon';
 import { SkeletonRows } from './Skeleton';
 import { useStickyHead } from '../useStickyHead';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const LIMIT = 10;
 
@@ -24,7 +25,7 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
   const head = useStickyHead();
 
   const Party = ({ addr }: { addr: string | null }) => {
-    if (!addr) return <span className="hint">—</span>;
+    if (!addr) return <span className="text-sm text-muted-foreground">—</span>;
     const w = byAddr.get(addr.toLowerCase());
     return w ? (
       <span className="with-logo">
@@ -41,27 +42,27 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
   return (
     <>
       {recent.length === 0 && !loading ? (
-        <p className="hint">{t('recent.empty')}</p>
+        <p className="text-sm text-muted-foreground">{t('recent.empty')}</p>
       ) : (
         <div className="table-wrap wtab-wrap">
-          <table className="tx recent">
-            <thead ref={head.ref} data-stuck={head.stuck}>
-              <tr>
-                <th scope="col">{t('tx.col.type')}</th>
-                <th scope="col">{t('tx.col.from')}</th>
-                <th scope="col">{t('tx.col.to')}</th>
-                <th scope="col" className="num">
+          <Table containerClassName="lg:overflow-visible" className="tx recent">
+            <TableHeader ref={head.ref} data-stuck={head.stuck}>
+              <TableRow>
+                <TableHead scope="col">{t('tx.col.type')}</TableHead>
+                <TableHead scope="col">{t('tx.col.from')}</TableHead>
+                <TableHead scope="col">{t('tx.col.to')}</TableHead>
+                <TableHead scope="col" className="num">
                   {t('tx.col.submitted')}
-                </th>
-                <th scope="col" className="num">
+                </TableHead>
+                <TableHead scope="col" className="num">
                   {t('tx.col.amount')}
-                </th>
-                <th scope="col" className="num">
+                </TableHead>
+                <TableHead scope="col" className="num">
                   {t('tx.col.fee')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {recent.length === 0 && loading && <SkeletonRows rows={5} cols={[120, 90, 90, 100, 110, 70]} />}
               {recent.map((r) => {
                 const real = r.moves.filter((m) => m.amount !== 0);
@@ -80,7 +81,7 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
                 const proto = r.counterpartyName ? (kind ? `${t(`kind.${kind}`)} · ${r.counterpartyName}` : r.counterpartyName) : '';
                 const subtitle = proto && base !== r.counterpartyName ? (base ? `${base} · ${proto}` : proto) : base;
                 return (
-                  <tr
+                  <TableRow
                     key={r.key}
                     className="tx-row"
                     tabIndex={0}
@@ -93,7 +94,7 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
                       }
                     }}
                   >
-                    <td>
+                    <TableCell>
                       <span className="act">
                         <span className="act-icon">
                           {isSwap ? (
@@ -120,15 +121,15 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
                           <span className="act-sub">{subtitle}</span>
                         </span>
                       </span>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <Party addr={r.from} />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <Party addr={r.to} />
-                    </td>
-                    <td className="num cell-time">{formatRelative(r.time, t)}</td>
-                    <td className="num">
+                    </TableCell>
+                    <TableCell className="num cell-time">{formatRelative(r.time, t)}</TableCell>
+                    <TableCell className="num">
                       <span className="amts">
                         {ins.map((m, i) => (
                           <span key={`i${i}`} className="amt-in">
@@ -143,8 +144,8 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
                         ))}
                         {!real.length && <span className="amt-out">—</span>}
                       </span>
-                    </td>
-                    <td className="num">
+                    </TableCell>
+                    <TableCell className="num">
                       <span className="fee">
                         {r.gasUsd !== null || r.gasNative !== null ? (
                           <>
@@ -155,12 +156,12 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
                           <span className="amt-out">—</span>
                         )}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </>

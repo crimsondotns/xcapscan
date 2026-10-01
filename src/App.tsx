@@ -206,18 +206,18 @@ export function App() {
       <a className="skip" href="#main">
         {t('nav.skip')}
       </a>
-      <header className="top">
+      <header className="top flex-wrap gap-2 py-2 sm:gap-3">
         <button type="button" className="brand" onClick={goDashboard} aria-label={t('nav.dashboard')}>
           <XCapMark />
           {t('app.name')} <span className="brand-sub">{t('app.sub')}</span>
         </button>
-        {page !== 'dashboard' && <GroupMenubar wallets={wallets} infoOf={infoOf} group={group} onChange={setGroup} chains={chains} />}
+        {page !== 'dashboard' && <div className="hidden md:flex"><GroupMenubar wallets={wallets} infoOf={infoOf} group={group} onChange={setGroup} chains={chains} /></div>}
         <span className="top-spacer" />
-        <Button onClick={() => openDialog('import')}>
+        <Button onClick={() => openDialog('import')} aria-label={t('wallets.import')}>
           <UploadIcon data-icon="inline-start" />
-          {t('wallets.import')}
+          <span className="hidden sm:inline">{t('wallets.import')}</span>
         </Button>
-        <Badge variant={hasEndpoint ? 'secondary' : 'outline'} className="top-status">
+        <Badge variant={hasEndpoint ? 'secondary' : 'outline'} className="hidden lg:inline-flex">
           {hasEndpoint ? t('status.endpointSet', { n: enabledEps.length }) : t('status.noEndpoint')}
         </Badge>
         <Button variant="ghost" size="icon" onClick={() => setVerifyOpen(true)} aria-label={t('slip.verify')} title={t('slip.verify')}>

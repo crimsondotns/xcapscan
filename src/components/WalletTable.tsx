@@ -13,6 +13,11 @@ import { SkeletonBar } from './Skeleton';
 import { useStickyHead } from '../useStickyHead';
 import { Logo } from './Logo';
 import { chainOf, type ChainInfo, type ChainMap } from '../chains';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SearchIcon } from 'lucide-react';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Badge } from '@/components/ui/badge';
 
 type SortKey = 'label' | 'tag';
 const PAGE = 20;
@@ -142,12 +147,12 @@ export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch
     setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
   }
   const Th = ({ k, label }: { k: SortKey; label: string }) => (
-    <th scope="col" aria-sort={sort.key === k ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-      <button type="button" className="th-btn" onClick={() => toggleSort(k)}>
+    <TableHead scope="col" aria-sort={sort.key === k ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <Button type="button" variant="ghost" size="sm" className="-ml-2.5 font-medium text-muted-foreground" onClick={() => toggleSort(k)}>
         {label}
         <Icon name={sort.key === k ? (sort.dir === 'asc' ? 'chevronUp' : 'chevronDown') : 'chevronsUpDown'} className="th-ico" />
-      </button>
-    </th>
+      </Button>
+    </TableHead>
   );
 
   return (
@@ -156,16 +161,21 @@ export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch
         <label className="sr-only" htmlFor="wallet-q">
           {t('wallets.title')}
         </label>
-        <input id="wallet-q" name="wq" type="search" className="input search mono" placeholder={t('tx.search')} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
+        <InputGroup className="max-w-sm">
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+          <InputGroupInput id="wallet-q" name="wq" type="search" placeholder={t('tx.search')} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
+        </InputGroup>
         <div className="row-actions">
-          <button type="button" className="btn" onClick={() => setAdding(true)}>
+          <Button type="button" variant="outline" onClick={() => setAdding(true)}>
             <Icon name="plus" />
             {t('wallets.add')}
-          </button>
+          </Button>
           {all.length > 0 && (
-            <button type="button" className="btn btn-icon" onClick={clear} aria-label={t('wallets.clear')} title={t('wallets.clear')}>
+            <Button type="button" variant="ghost" size="icon" onClick={clear} aria-label={t('wallets.clear')} title={t('wallets.clear')}>
               <Icon name="trash" />
-            </button>
+            </Button>
           )}
         </div>
         <span className="count" aria-live="polite">
@@ -174,25 +184,25 @@ export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch
       </div>
 
       {sorted.length === 0 ? (
-        <p className="hint">{t('wallets.empty')}</p>
+        <p className="text-sm text-muted-foreground">{t('wallets.empty')}</p>
       ) : (
         <div className="table-wrap wtab-wrap">
-          <table className="tx wtab">
-            <thead ref={head.ref} data-stuck={head.stuck}>
-              <tr>
+          <Table containerClassName="lg:overflow-visible" className="tx wtab">
+            <TableHeader ref={head.ref} data-stuck={head.stuck}>
+              <TableRow>
                 <Th k="label" label={t('wallets.col.label')} />
                 <Th k="tag" label={t('wallets.col.tag')} />
-                <th scope="col">{t('wallets.col.support')}</th>
-                <th scope="col" className="num">
+                <TableHead scope="col">{t('wallets.col.support')}</TableHead>
+                <TableHead scope="col" className="num">
                   <span className="sr-only">{t('wallets.title')}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {visible.map((w) => {
                 const loading = isLoading(w);
                 return (
-                  <tr
+                  <TableRow
                     key={w.id}
                     className="tx-row wt-row"
                     aria-selected={activeId === w.id}
@@ -206,7 +216,7 @@ export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch
                       }
                     }}
                   >
-                    <td>
+                    <TableCell>
                       <span className="wt-cell">
                         <Identicon value={w.address} size={36} />
                         <span className="act-text">
@@ -214,33 +224,33 @@ export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch
                           <span className="act-sub mono">{shortAddr(w.address)}</span>
                         </span>
                       </span>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {w.tags?.length ? (
-                        <span className="tag-list">
+                        <span className="flex flex-wrap gap-1">
                           {w.tags.map((tag) => (
-                            <span key={tag} className="tag">
+                            <Badge key={tag} variant="secondary">
                               {tag}
-                            </span>
+                            </Badge>
                           ))}
                         </span>
                       ) : (
                          <span className="idle">—</span>
                       )}
-                    </td>
-                    <td>{loading ? <SkeletonBar width={64} /> : <WalletMarks family={w.family} chainIds={chainsOf(w)} chains={chains} />}</td>
-                    <td className="num">
+                    </TableCell>
+                    <TableCell>{loading ? <SkeletonBar width={64} /> : <WalletMarks family={w.family} chainIds={chainsOf(w)} chains={chains} />}</TableCell>
+                    <TableCell className="num">
                       <span className="wallet-actions" onClick={(e) => e.stopPropagation()}>
-                        <button type="button" className="btn btn-icon" onClick={() => remove(w)} aria-label={t('wallets.remove', { label: w.label })} title={t('wallets.remove', { label: w.label })}>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(w)} aria-label={t('wallets.remove', { label: w.label })} title={t('wallets.remove', { label: w.label })}>
                           <Icon name="trash" />
-                        </button>
+                        </Button>
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           <MoreSentinel sentinel={inf.sentinel} loading={false} exhausted={inf.exhausted} page={PAGE} count={sorted.length} />
         </div>
       )}

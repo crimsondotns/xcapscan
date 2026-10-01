@@ -8,6 +8,9 @@ import { useI18n } from '../i18n';
 import type { Family, Wallet } from '../store';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
+import { Button } from '@/components/ui/button';
+import { ChevronDownIcon } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export interface GroupNavProps {
   wallets: Wallet[];
@@ -88,24 +91,24 @@ export function GroupRail(props: GroupNavProps) {
 function Menu({ label, items, group, onChange }: { label: string; items: Item[]; group: GroupId; onChange: (g: GroupId) => void }) {
   if (!items.length) return null;
   return (
-    <div className="menu">
-      <button type="button" className="btn btn-sm" aria-haspopup="true">
-        <span className="dd-text">{label}</span>
-        <Icon name="chevronDown" className="dd-chev" />
-      </button>
-      <ul className="dd-panel" role="menu" aria-label={label}>
-        {items.map((item) => (
-          <li key={item.id} role="none">
-            <button type="button" role="menuitem" className="dd-item" aria-selected={group === item.id} onClick={() => onChange(item.id)}>
-              <span className="dd-item-text">
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="sm" />}>
+        {label}
+        <ChevronDownIcon data-icon="inline-end" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="min-w-56">
+        <DropdownMenuGroup>
+          <DropdownMenuRadioGroup value={group} onValueChange={(v: string) => onChange(v as GroupId)}>
+            {items.map((item) => (
+              <DropdownMenuRadioItem key={item.id} value={item.id}>
                 <ItemLabel item={item} />
-              </span>
-              <small>{item.count}</small>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+                <span className="ml-auto pr-5 text-muted-foreground tabular-nums">{item.count}</span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

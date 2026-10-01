@@ -22,6 +22,9 @@ import { Icon } from '../components/Icon';
 import { chainOf } from '../chains';
 import { priceOf } from '../prices';
 import { useStickyHead } from '../useStickyHead';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onRange, onBack, onBackWallet, onWallet, onScopeAll, selected, onSelect, loading }: { symbol: string; wallet: Wallet | null; all: Wallet[]; rows: TxRow[]; chains: ChainMap; group: GroupId; range: Range; onRange: (r: Range) => void; onBack: () => void; onBackWallet: () => void; onWallet: (id: string) => void; onScopeAll: () => void; selected: string | null; onSelect: (r: TxRow) => void; loading: boolean }) {
   const { t } = useI18n();
@@ -46,21 +49,25 @@ export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onR
 
   return (
     <>
-      <nav className="crumbs" aria-label={t('nav.back')}>
-        <button type="button" onClick={onBack}>
-          {groupLabel}
-        </button>
-        <span aria-hidden="true">›</span>
-        {wallet && (
-          <>
-            <button type="button" onClick={onBackWallet}>
-              {wallet.label}
-            </button>
-            <span aria-hidden="true">›</span>
-          </>
-        )}
-        <span>{symbol}</span>
-      </nav>
+      <Breadcrumb aria-label={t('nav.back')}>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<button type="button" onClick={onBack} />}>{groupLabel}</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          {wallet && (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink render={<button type="button" onClick={onBackWallet} />}>{wallet.label}</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+            </>
+          )}
+          <BreadcrumbItem>
+            <BreadcrumbPage>{symbol}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <section className="panel">
         <div className="headline">
           <span className="who">
@@ -87,14 +94,10 @@ export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onR
           </span>
           <span className="top-spacer" />
           {wallet && (
-            <span className="chips" role="group" aria-label={t('token.scopeLabel')}>
-              <button type="button" aria-pressed={true}>
-                {t('token.scopeWallet', { label: wallet.label })}
-              </button>
-              <button type="button" aria-pressed={false} onClick={onScopeAll}>
-                {t('token.scopeAll')}
-              </button>
-            </span>
+            <ToggleGroup variant="outline" size="sm" value={['wallet']} onValueChange={(v: string[]) => v[0] === 'all' && onScopeAll()} aria-label={t('token.scopeLabel')}>
+              <ToggleGroupItem value="wallet">{t('token.scopeWallet', { label: wallet.label })}</ToggleGroupItem>
+              <ToggleGroupItem value="all">{t('token.scopeAll')}</ToggleGroupItem>
+            </ToggleGroup>
           )}
           <RangeChips value={range} onChange={onRange} />
         </div>
@@ -117,25 +120,25 @@ export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onR
           <TxTable rows={list} wallets={all} chains={chains} wallet={wallet?.id ?? ''} onWallet={(id) => (id ? onWallet(id) : onScopeAll())} selected={selected} onSelect={onSelect} loading={loading} />
         ) : (
           <div className="table-wrap">
-            <table className="tx">
-              <thead ref={holdersHead.ref} data-stuck={holdersHead.stuck}>
-                <tr>
-                  <th scope="col">{t('tx.col.wallet')}</th>
-                  <th scope="col" className="num">
+            <Table containerClassName="lg:overflow-visible" className="tx">
+              <TableHeader ref={holdersHead.ref} data-stuck={holdersHead.stuck}>
+                <TableRow>
+                  <TableHead scope="col">{t('tx.col.wallet')}</TableHead>
+                  <TableHead scope="col" className="num">
                     {t('token.times')}
-                  </th>
-                  <th scope="col" className="num">
+                  </TableHead>
+                  <TableHead scope="col" className="num">
                     {t('token.net')}
-                  </th>
-                  <th scope="col" className="num">
+                  </TableHead>
+                  <TableHead scope="col" className="num">
                     {t('wallets.col.last')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {holders.length === 0 && loading && <SkeletonRows rows={4} cols={[160, 60, 90, 90]} />}
                 {holders.map((h) => (
-                  <tr
+                  <TableRow
                     key={h.id}
                     className="tx-row"
                     tabIndex={0}
@@ -147,7 +150,7 @@ export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onR
                       }
                     }}
                   >
-                    <td>
+                    <TableCell>
                       <span className="who">
                         <Identicon value={h.wallet?.address ?? h.id} size={28} />
                         <span className="act-text">
@@ -155,16 +158,16 @@ export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onR
                           <span className="act-sub mono">{shortAddr(h.wallet?.address ?? h.id)}</span>
                         </span>
                       </span>
-                    </td>
-                    <td className="num">{h.count}</td>
-                    <td className="num">
+                    </TableCell>
+                    <TableCell className="num">{h.count}</TableCell>
+                    <TableCell className="num">
                       <span className={signClassOf(h.net)}>{formatUsdExact(h.net)}</span>
-                    </td>
-                    <td className="num cell-time">{h.last === null ? '—' : formatRelative(h.last, t)}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="num cell-time">{h.last === null ? '—' : formatRelative(h.last, t)}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </section>

@@ -9,6 +9,8 @@ import type { TxRow } from '../feed';
 import { shortAddr, shortHash } from '../format';
 import { tokenSummary } from '../flow';
 import { chainOf, type ChainInfo, type ChainMap } from '../chains';
+import { SearchIcon } from 'lucide-react';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 
 export interface Hit {
   key: string;
@@ -163,11 +165,14 @@ export function Finder({ wallets, rows, chains, onWallet, onToken }: { wallets: 
       <label className="sr-only" htmlFor="finder">
         {t('find.label')}
       </label>
-      <input
+      <InputGroup className="w-full sm:w-64 lg:w-72">
+        <InputGroupAddon>
+          <SearchIcon />
+        </InputGroupAddon>
+        <InputGroupInput
         id="finder"
         name="find"
         type="search"
-        className="input search mono"
         placeholder={t('find.placeholder')}
         value={q}
         autoComplete="off"
@@ -183,11 +188,12 @@ export function Finder({ wallets, rows, chains, onWallet, onToken }: { wallets: 
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKey}
-      />
+        />
+      </InputGroup>
       {shown && (
         <div className="results" id={listId} role="listbox" aria-label={t('find.label')}>
           {hits.length === 0 ? (
-            <p className="hint">{t('find.empty')}</p>
+            <p className="text-sm text-muted-foreground">{t('find.empty')}</p>
           ) : (
             hits.map((h, i) => (
               <button key={h.key} type="button" role="option" aria-selected={i === active} data-active={i === active} onMouseEnter={() => setActive(i)} onClick={() => pick(h)}>

@@ -12,6 +12,12 @@ import { protocolKind } from '../kind';
 import { Dropdown } from './Dropdown';
 import { Logo } from './Logo';
 import { chainOf, type ChainMap } from '../chains';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
+import { SearchIcon } from 'lucide-react';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 
 const TYPES: TxType[] = ['swap', 'send', 'receive', 'approve', 'contract'];
 /** ตัวกรองชนิด: 'transfer' = โอน นับทั้งส่งและรับในอันเดียว ('' = ทุกประเภท) */
@@ -109,12 +115,12 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   }
 
   const Head = ({ k, label, num }: { k: SortKey; label: string; num?: boolean }) => (
-    <th scope="col" className={num ? 'num' : undefined} aria-sort={sort.key === k ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-      <button type="button" className="th-btn" onClick={() => toggleSort(k)}>
+    <TableHead scope="col" className={num ? 'num' : undefined} aria-sort={sort.key === k ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <Button type="button" variant="ghost" size="sm" className="-ml-2.5 font-medium text-muted-foreground" onClick={() => toggleSort(k)}>
         {label}
         <Icon name={sort.key === k ? (sort.dir === 'asc' ? 'chevronUp' : 'chevronDown') : 'chevronsUpDown'} className="th-ico" />
-      </button>
-    </th>
+      </Button>
+    </TableHead>
   );
 
   return (
@@ -123,7 +129,12 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
         <label className="sr-only" htmlFor="tx-q">
           {t('tx.search')}
         </label>
-        <input id="tx-q" name="q" type="search" className="input search mono" placeholder={t('tx.search')} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
+        <InputGroup className="max-w-sm">
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+          <InputGroupInput id="tx-q" name="q" type="search" placeholder={t('tx.search')} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
+        </InputGroup>
         <Dropdown value={wallet} onChange={onWallet} label={t('tx.col.wallet')} options={[{ value: '', label: t('tx.allWallets') }, ...wallets.map((w) => ({ value: w.id, label: w.label }))]} />
         <Dropdown
           value={chain}
@@ -147,19 +158,12 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
           ]}
         />
         <Dropdown value={type} onChange={setType} label={t('tx.col.type')} options={[{ value: '' as TypeFilter, label: t('tx.allTypes'), meta: scope.length }, { value: 'transfer' as TypeFilter, label: t('tx.typeTransfer'), meta: countType('transfer') }, ...TYPES.map((k) => ({ value: k as TypeFilter, label: t(`tx.type.${k}`), meta: countType(k) }))]} />
-        {/* ป้ายกดแล้วสลับได้เหมือนกัน — label ที่ผูกกับปุ่ม (ไม่ใช่ input) ไม่ส่งคลิกต่อเอง จึงต้องสลับให้ตรงนี้ */}
-        <span className="switch-field">
-          <button type="button" className="switch" role="switch" aria-checked={hideScam} id="tx-hide-scam" aria-label={t('tx.hideScam')} onClick={() => setHideScam(!hideScam)} />
-          <label
-            htmlFor="tx-hide-scam"
-            onClick={(e) => {
-              e.preventDefault();
-              setHideScam(!hideScam);
-            }}
-          >
+        <Field orientation="horizontal" className="w-auto">
+          <Switch id="tx-hide-scam" checked={hideScam} onCheckedChange={(v) => setHideScam(v)} />
+          <FieldLabel htmlFor="tx-hide-scam" className="font-normal">
             {t('tx.hideScam')}
-          </label>
-        </span>
+          </FieldLabel>
+        </Field>
         <span className="count" aria-live="polite">
           {t('tx.count', { n: filtered.length })}
         </span>
@@ -171,16 +175,16 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
         </div>
       ) : (
         <div className="table-wrap">
-          <table className="tx">
-            <thead ref={head.ref} data-stuck={head.stuck}>
-              <tr>
+          <Table containerClassName="lg:overflow-visible" className="tx">
+            <TableHeader ref={head.ref} data-stuck={head.stuck}>
+              <TableRow>
                 <Head k="type" label={t('tx.col.type')} />
                 <Head k="date" label={t('tx.col.submitted')} num />
                 <Head k="amount" label={t('tx.col.amount')} num />
                 <Head k="fee" label={t('tx.col.fee')} num />
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filtered.length === 0 && loading && <SkeletonRows rows={8} cols={[140, 110, 120, 80]} />}
               {shown.map((r) => {
                 const real = r.moves.filter((m) => m.amount !== 0);
@@ -201,7 +205,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                 const symbols = [...new Set(real.map((m) => m.symbol))];
                 const isSel = r.key === selected;
                 return (
-                  <tr
+                  <TableRow
                     key={r.key}
                     className="tx-row"
                     tabIndex={0}
@@ -214,7 +218,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                       }
                     }}
                   >
-                    <td>
+                    <TableCell>
                       <span className="act">
                         <span className="act-icon">
                           {isSwap ? (
@@ -264,9 +268,9 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                           </span>
                         </span>
                       </span>
-                    </td>
-                    <td className="num cell-time">{formatRelative(r.time, t)}</td>
-                    <td className="num">
+                    </TableCell>
+                    <TableCell className="num cell-time">{formatRelative(r.time, t)}</TableCell>
+                    <TableCell className="num">
                       <span className="amts">
                         {ins.map((m, i) => (
                           <span key={`i${i}`} className="amt-in">
@@ -281,18 +285,18 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                         ))}
                         {real.length === 0 && <span className="amt-out">—</span>}
                       </span>
-                    </td>
-                    <td className="num">
+                    </TableCell>
+                    <TableCell className="num">
                       <span className="fee">
                         <span>{formatFeeUsd(r.gasUsd)}</span>
                         {r.gasNative !== null && <span className="amt-out">{formatFeeNative(r.gasNative, native)}</span>}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           <MoreSentinel sentinel={inf.sentinel} loading={loading && shown.length > 0} exhausted={inf.exhausted} page={PAGE} count={filtered.length} />
         </div>
       )}

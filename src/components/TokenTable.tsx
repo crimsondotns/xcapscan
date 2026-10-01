@@ -11,6 +11,9 @@ import { Icon } from './Icon';
 import { useStickyHead } from '../useStickyHead';
 import { SkeletonRows } from './Skeleton';
 import { useStore } from '../store';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
 
 export function TokenTable({ rows, chains, onToken, loading = false }: { rows: TxRow[]; chains: ChainMap; onToken: (symbol: string) => void; loading?: boolean }) {
   const { t } = useI18n();
@@ -27,23 +30,16 @@ export function TokenTable({ rows, chains, onToken, loading = false }: { rows: T
   }, [rows]);
   const tokens = useMemo(() => (hideScam ? all.filter((k) => !k.flagged) : all), [all, hideScam]);
   const head = useStickyHead();
-  if (!all.length && !loading) return <p className="hint">{t('tx.emptyLoaded')}</p>;
+  if (!all.length && !loading) return <p className="text-sm text-muted-foreground">{t('tx.emptyLoaded')}</p>;
   return (
     <>
       <div className="toolbar">
-        {/* ป้ายกดแล้วสลับได้เหมือนกัน — label ที่ผูกกับปุ่ม (ไม่ใช่ input) ไม่ส่งคลิกต่อเอง จึงต้องสลับให้ตรงนี้ */}
-        <span className="switch-field">
-          <button type="button" className="switch" role="switch" aria-checked={hideScam} id="token-hide-scam" aria-label={t('tx.hideScam')} onClick={() => setHideScam(!hideScam)} />
-          <label
-            htmlFor="token-hide-scam"
-            onClick={(e) => {
-              e.preventDefault();
-              setHideScam(!hideScam);
-            }}
-          >
+        <Field orientation="horizontal" className="w-auto">
+          <Switch id="token-hide-scam" checked={hideScam} onCheckedChange={(v) => setHideScam(v)} />
+          <FieldLabel htmlFor="token-hide-scam" className="font-normal">
             {t('tx.hideScam')}
-          </label>
-        </span>
+          </FieldLabel>
+        </Field>
         <span className="count" aria-live="polite">
           {t('token.count', { n: tokens.length })}
         </span>
@@ -54,28 +50,28 @@ export function TokenTable({ rows, chains, onToken, loading = false }: { rows: T
         </div>
       ) : (
         <div className="table-wrap">
-          <table className="tx">
-            <thead ref={head.ref} data-stuck={head.stuck}>
-              <tr>
-                <th scope="col">{t('tab.tokens')}</th>
-                <th scope="col" className="num">
+          <Table containerClassName="lg:overflow-visible" className="tx">
+            <TableHeader ref={head.ref} data-stuck={head.stuck}>
+              <TableRow>
+                <TableHead scope="col">{t('tab.tokens')}</TableHead>
+                <TableHead scope="col" className="num">
                   {t('flow.in')}
-                </th>
-                <th scope="col" className="num">
+                </TableHead>
+                <TableHead scope="col" className="num">
                   {t('flow.out')}
-                </th>
-                <th scope="col" className="num">
+                </TableHead>
+                <TableHead scope="col" className="num">
                   {t('token.net')}
-                </th>
-                <th scope="col" className="num">
+                </TableHead>
+                <TableHead scope="col" className="num">
                   {t('token.times')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {tokens.length === 0 && loading && <SkeletonRows rows={5} cols={[150, 90, 90, 90, 50]} />}
               {tokens.map((k) => (
-                <tr
+                <TableRow
                   key={k.symbol}
                   className="tx-row"
                   tabIndex={0}
@@ -87,7 +83,7 @@ export function TokenTable({ rows, chains, onToken, loading = false }: { rows: T
                     }
                   }}
                 >
-                  <td>
+                  <TableCell>
                     <span className="who">
                       <TokenLogo token={k.logo} tokenName={k.symbol} chain={chainOf(chains, k.chain)?.logo ?? feedChainLogo.get(k.chain) ?? null} chainName={chainOf(chains, k.chain)?.name ?? k.chain} size={28} />
                       <span className="act-text">
@@ -119,17 +115,17 @@ export function TokenTable({ rows, chains, onToken, loading = false }: { rows: T
                         </span>
                       </span>
                     </span>
-                  </td>
-                  <td className="num">{formatUsdExact(k.inUsd)}</td>
-                  <td className="num">{formatUsdExact(k.outUsd)}</td>
-                  <td className="num">
+                  </TableCell>
+                  <TableCell className="num">{formatUsdExact(k.inUsd)}</TableCell>
+                  <TableCell className="num">{formatUsdExact(k.outUsd)}</TableCell>
+                  <TableCell className="num">
                     <span className={signClassOf(k.inUsd - k.outUsd)}>{formatUsdExact(k.inUsd - k.outUsd)}</span>
-                  </td>
-                  <td className="num">{k.count}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="num">{k.count}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </>

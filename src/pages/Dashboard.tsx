@@ -18,6 +18,8 @@ import { WalletTable } from '../components/WalletTable';
 import { RecentTable } from '../components/RecentTable';
 import { Icon } from '../components/Icon';
 import { SkeletonBar } from '../components/Skeleton';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 export function Dashboard({ all, wallets, rows, feeds, chains, group, onGroup, infoOf, range, onRange, onOpenWallet, onSwitch, onRemove, hasSource, onLoadGroup, loading, progress, onCancel, selected, onSelect }: { all: Wallet[]; wallets: Wallet[]; rows: TxRow[]; feeds: Record<string, WalletFeed>; chains: ChainMap; group: GroupId; onGroup: (g: GroupId) => void; infoOf: (w: Wallet) => WalletInfo; range: Range; onRange: (r: Range) => void; onOpenWallet: (id: string) => void; onSwitch: (id: string | null) => void; onRemove: (id: string) => void; hasSource: (w: Wallet) => boolean; onLoadGroup: () => void; loading: boolean; progress: Progress; onCancel: () => void; selected: string | null; onSelect: (r: TxRow) => void }) {
   const { t } = useI18n();
@@ -35,27 +37,27 @@ export function Dashboard({ all, wallets, rows, feeds, chains, group, onGroup, i
       <section className="panel" aria-labelledby="group-h">
         <div className="headline">
           <span className="head-sum">
-            <span className="hint" id="group-h">
+            <span className="text-sm text-muted-foreground" id="group-h">
               {t('group.summary', { group: label, n: wallets.length, loaded: loadedCount })}
             </span>
             <div className="big-row">
               {pending ? <SkeletonBar width={200} height={30} /> : <div className={`big ${signClassOf(sums.net)}`}>{formatUsdExact(sums.net)}</div>}
               {progress.running ? (
-                <button type="button" className="btn btn-sm" onClick={onCancel}>
+                <Button type="button" variant="outline" size="sm" onClick={onCancel}>
                   {t('recent.cancel')}
-                </button>
+                </Button>
               ) : (
-                <button type="button" className="btn btn-icon" onClick={onLoadGroup} disabled={loading} aria-label={t('group.load')} title={t('group.load')}>
+                <Button type="button" variant="ghost" size="icon" onClick={onLoadGroup} disabled={loading} aria-label={t('group.load')} title={t('group.load')}>
                   <Icon name="refresh" />
-                </button>
+                </Button>
               )}
-              <span className="hint" aria-live="polite">
+              <span className="text-sm text-muted-foreground" aria-live="polite">
                 {progress.running ? (
                   <>
-                    <span className="spinner" aria-hidden="true" /> {t('recent.progress', { done: progress.done, total: progress.total })}
+                    <Spinner className="inline" /> {t('recent.progress', { done: progress.done, total: progress.total })}
                   </>
                 ) : progress.stopped === 'rate' ? (
-                  <span className="error">{progress.retryIn > 0 ? t('recent.rateLimitedIn', { n: progress.retryIn }) : t('recent.rateLimited')}</span>
+                  <span className="text-sm text-destructive">{progress.retryIn > 0 ? t('recent.rateLimitedIn', { n: progress.retryIn }) : t('recent.rateLimited')}</span>
                 ) : progress.stopped === 'cancel' ? (
                   t('recent.cancelled')
                 ) : (
@@ -63,7 +65,7 @@ export function Dashboard({ all, wallets, rows, feeds, chains, group, onGroup, i
                 )}
               </span>
             </div>
-            <span className="hint">{t('flow.net', { n: range, tx: sums.count })}</span>
+            <span className="text-sm text-muted-foreground">{t('flow.net', { n: range, tx: sums.count })}</span>
           </span>
           <span className="top-spacer" />
           <RangeChips value={range} onChange={onRange} />

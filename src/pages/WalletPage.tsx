@@ -18,6 +18,8 @@ import { TxTable } from '../components/TxTable';
 import { Identicon } from '../components/Identicon';
 import { Icon } from '../components/Icon';
 import { TagDialog } from '../components/TagDialog';
+import { Button } from '@/components/ui/button';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 // 👇 เพิ่ม onFetchMeta เข้าไปใน props
 export function WalletPage({ 
@@ -61,13 +63,17 @@ export function WalletPage({
 
   return (
     <>
-      <nav className="crumbs" aria-label={t('nav.back')}>
-        <button type="button" onClick={onBack}>
-          {groupLabel}
-        </button>
-        <span aria-hidden="true">›</span>
-        <span>{wallet.label}</span>
-      </nav>
+      <Breadcrumb aria-label={t('nav.back')}>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<button type="button" onClick={onBack} />}>{groupLabel}</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{wallet.label}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <section className="panel">
         <div className="headline">
           <span className="who">
@@ -78,17 +84,17 @@ export function WalletPage({
                 <span className="mono">
                   {shortAddr(wallet.address)} · {t(`family.${wallet.family}`)}
                 </span>
-                <button type="button" className="btn btn-icon btn-inline" disabled={loading} onClick={onReload} aria-label={t('tx.reload')} title={t('tx.reload')}>
+                <Button type="button" variant="ghost" size="icon-xs" disabled={loading} onClick={onReload} aria-label={t('tx.reload')} title={t('tx.reload')}>
                   <Icon name="refresh" />
-                </button>
+                </Button>
               </span>
             </span>
           </span>
           <span className="top-spacer" />
-          <button type="button" className="btn" onClick={() => setTagsOpen(true)}>
+          <Button type="button" variant="outline" onClick={() => setTagsOpen(true)}>
             <Icon name="tag" />
             {tags.length === 0 ? t('tags.edit') : tags.length > 2 ? `${tags.slice(0, 2).join(' · ')} +${tags.length - 2}` : tags.join(' · ')}
-          </button>
+          </Button>
           <RangeChips value={range} onChange={onRange} />
         </div>
         <div className="stat-row">
