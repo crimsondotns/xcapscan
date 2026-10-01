@@ -22,7 +22,7 @@ Breakpoints: mobile < 640, tablet 640–1024, desktop > 1024. Tokens in `tokens.
 
 ## Transaction table (user spec, 2026-09-21)
 
-Four columns, all sortable: **Type** (token icon 40px, or two 28px overlapping icons for a swap, chain badge bottom-right; title = type, subtitle = wallet · token name or `OUT → IN`), **Submitted** (relative time: `29 min ago`, `15:04, yesterday`, `17:48, 17 Sep 26`), **Amount** (compact in the table, full precision only in the detail panel; incoming legs first in `--color-positive` green/medium, outgoing below in muted/caption), **Network fee** (USD, native amount, short hash linking to the chain explorer). No borders, no shadow; row click opens the detail panel.
+Four columns, all sortable: **Type** (token icon 40px, or two 28px overlapping icons for a swap, chain badge bottom-right; title = type, subtitle = wallet · token name or `OUT → IN`), **Submitted** (relative time: `29 min ago`, `15:04, yesterday`, `17:48, 17 Sep 26`), **Amount** (compact in the table, full precision only in the detail panel; incoming legs first in `--color-positive` green/medium, outgoing below in muted/caption), **Network fee** (USD, native amount; on mobile also a short hash + link icon to the chain explorer — removed on tablet/desktop, user 2026-10-01). No borders, no shadow; row click opens the detail panel.
 
 ## Wallets panel (user spec, 2026-09-21)
 

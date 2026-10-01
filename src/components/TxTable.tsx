@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
-import { SearchIcon } from 'lucide-react';
+import { LinkIcon, SearchIcon } from 'lucide-react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { ADV_EMPTY, AdvancedFilterButton, AdvancedFilterChips, advFromTs, advMatches, type AdvFilter } from './AdvancedFilter';
 import { Spinner } from '@/components/ui/spinner';
@@ -407,14 +407,15 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                         <span>{formatFeeUsd(r.gasUsd)}</span>
                         {r.gasNative !== null && <span className="amt-out">{formatFeeNative(r.gasNative, native)}</span>}
                         {(() => {
-                          // hash สั้น → explorer ของเชน (chain list / Custom chains); ไม่มี explorer = ข้อความเฉยๆ
+                          // มือถือเท่านั้น (ผู้ใช้ 2026-10-01): hash สั้น → explorer ของเชน (chain list / Custom chains); ไม่มี explorer = ข้อความเฉยๆ
                           const host = chainOf(chainInfo, r.chain)?.explorer?.replace(/\/+$/, '').replace(/\/tx$/i, '');
                           return host ? (
-                            <a className="amt-out hover:text-foreground hover:underline" href={`${host}/tx/${r.hash}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title={r.hash}>
+                            <a className="amt-out inline-flex items-center justify-end gap-1 hover:text-foreground hover:underline sm:hidden" href={`${host}/tx/${r.hash}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title={r.hash}>
                               {shortHash(r.hash)}
+                              <LinkIcon aria-hidden className="size-3.5" />
                             </a>
                           ) : (
-                            <span className="amt-out" title={r.hash}>
+                            <span className="amt-out sm:hidden" title={r.hash}>
                               {shortHash(r.hash)}
                             </span>
                           );
