@@ -23,7 +23,7 @@ function useDrawer() {
 
 function Drawer({
   modal = true,
-  showSwipeHandle = false,
+  showSwipeHandle = true, // แอปนี้: ทุก Drawer มีที่จับ ลากลงเพื่อปิด (ผู้ใช้ 2026-10-01)
   snapPoints,
   swipeDirection = "down",
   ...props

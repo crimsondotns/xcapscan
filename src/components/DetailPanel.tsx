@@ -21,6 +21,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+
+/* ส่วนหัว/ท้ายของแผง — Sheet (เดสก์ท็อป) หรือ Drawer (มือถือ ลากลงเพื่อปิด) */
+const SHEET = { Header: SheetHeader, Title: SheetTitle, Description: SheetDescription, Footer: SheetFooter };
+const DRAWER = { Header: DrawerHeader, Title: DrawerTitle, Description: DrawerDescription, Footer: DrawerFooter };
 
 type PanelProps = { row: TxRow | null; wallets: Wallet[]; chains: ChainMap; settings: Settings; onClose: () => void };
 
@@ -37,17 +42,23 @@ export function DetailPanel(props: PanelProps) {
   useEffect(() => setSlip(null), [props.row]);
   return (
     <>
-      <Sheet open={props.row !== null} onOpenChange={(o) => !o && props.onClose()}>
-        <SheetContent side={mobile ? 'bottom' : 'right'} className={cn('gap-0', mobile ? 'max-h-[92dvh] rounded-t-xl' : 'w-full sm:max-w-[440px]')}>
-          {row && <DetailBody {...props} row={row} onSlip={setSlip} />}
-        </SheetContent>
-      </Sheet>
+      {mobile ? (
+        <Drawer open={props.row !== null} onOpenChange={(o) => !o && props.onClose()}>
+          <DrawerContent className="max-h-[92dvh]">{row && <DetailBody {...props} row={row} onSlip={setSlip} parts={DRAWER} />}</DrawerContent>
+        </Drawer>
+      ) : (
+        <Sheet open={props.row !== null} onOpenChange={(o) => !o && props.onClose()}>
+          <SheetContent side="right" className="w-full gap-0 sm:max-w-[440px]">
+            {row && <DetailBody {...props} row={row} onSlip={setSlip} parts={SHEET} />}
+          </SheetContent>
+        </Sheet>
+      )}
       <SlipLightbox data={slip} onClose={() => setSlip(null)} />
     </>
   );
 }
 
-function DetailBody({ row, wallets, chains, settings, onSlip: setSlip }: PanelProps & { row: TxRow; onSlip: (d: SlipData) => void }) {
+function DetailBody({ row, wallets, chains, settings, onSlip: setSlip, parts: P }: PanelProps & { row: TxRow; onSlip: (d: SlipData) => void; parts: typeof SHEET | typeof DRAWER }) {
   const { t } = useI18n();
   const { toast } = useToast();
   /* คลิกตัวเลข → คัดลอกค่าเต็มความละเอียด (ไม่ใช่ที่แสดง) */
@@ -176,8 +187,8 @@ function DetailBody({ row, wallets, chains, settings, onSlip: setSlip }: PanelPr
 
   return (
     <>
-      <SheetHeader className="border-b pr-12">
-        <SheetTitle className="flex items-center gap-2 text-lg">
+      <P.Header className="border-b pr-12 pb-4 text-left">
+        <P.Title className="flex items-center gap-2 text-lg">
           {t(`tx.type.${row.type}`)}
           {row.flagged && (
             <Badge variant="destructive" title={t('tx.scam')}>
@@ -185,15 +196,15 @@ function DetailBody({ row, wallets, chains, settings, onSlip: setSlip }: PanelPr
               {t('tx.scam')}
             </Badge>
           )}
-        </SheetTitle>
-        <SheetDescription className="flex flex-wrap items-center gap-2">
+        </P.Title>
+        <P.Description className="flex flex-wrap items-center gap-2">
           <span>{formatStamp(row.time)}</span>
           <Badge variant={row.failed ? 'destructive' : 'secondary'}>
             {row.failed ? <XIcon data-icon="inline-start" /> : <CheckIcon data-icon="inline-start" />}
             {row.failed ? t('tx.failed') : t('detail.executed')}
           </Badge>
-        </SheetDescription>
-      </SheetHeader>
+        </P.Description>
+      </P.Header>
 
       <div className="drawer-body flex-1 overflow-y-auto overscroll-contain">
         {isSwap ? (
@@ -282,7 +293,7 @@ function DetailBody({ row, wallets, chains, settings, onSlip: setSlip }: PanelPr
       </div>
 
       {/* ปุ่มเดียวเต็มกว้าง → เมนูลอยขึ้นด้านบน: ดูสลิป / ดูบน explorer */}
-      <SheetFooter className="border-t">
+      <P.Footer className="border-t pt-4">
         <ViewMenu
           label={t('detail.view')}
           items={[
@@ -306,7 +317,7 @@ function DetailBody({ row, wallets, chains, settings, onSlip: setSlip }: PanelPr
             txUrl ? { key: 'explorer', label: t('detail.viewOn', { name: explorerName }), href: txUrl } : { key: 'explorer', label: t('detail.noExplorer'), disabled: true },
           ]}
         />
-      </SheetFooter>
+      </P.Footer>
     </>
   );
 }
