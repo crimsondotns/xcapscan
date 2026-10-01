@@ -697,6 +697,11 @@ input[type='file'].input::file-selector-button {
   color: var(--color-muted);
   font-weight: var(--weight-medium);
 }
+/* สเปก: ยอดออกอยู่ล่าง สีจาง ขนาด caption */
+.amts .amt-out {
+  font-size: var(--size-caption);
+  font-weight: var(--weight-regular);
+}
 
 /* ---------- โลโก้ ---------- */
 
@@ -1149,6 +1154,9 @@ input[type='file'].input::file-selector-button {
     flex-basis: 100%;
   }
   /* ตาราง (ผู้ใช้ 2026-10-01): 2 คอลัมน์ Type · Amount พอดีจอ ไม่เลื่อนแนวนอน */
+  .tx {
+    min-width: 0;
+  }
   .tx th:nth-child(2),
   .tx td:nth-child(2),
   .tx th:nth-child(4),

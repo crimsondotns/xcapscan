@@ -79,6 +79,21 @@ th.num > [data-slot='button'] {
   }
 }
 
+/* มือถือ: ขอบซ้าย/ขวาของตารางตรงกับแถบเครื่องมือ (ไม่มี inset เพิ่ม 8px) */
+@media (max-width: 639px) {
+  .tx td:first-child,
+  .tx th:first-child {
+    padding-left: 0;
+  }
+  .tx td:last-child,
+  .tx th:last-child {
+    padding-right: 0;
+  }
+  .tx th:first-child > [data-slot='button'] {
+    margin-left: -0.625rem;
+  }
+}
+
 /* ไม่แสดงแถบเลื่อนที่ไหนเลย (สเปกผู้ใช้ 2026-10-01) — ยังเลื่อนได้ตามปกติด้วยล้อ/ทัชแพด/นิ้ว/คีย์บอร์ด */
 *,
 *::before,
