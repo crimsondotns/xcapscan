@@ -697,11 +697,6 @@ input[type='file'].input::file-selector-button {
   color: var(--color-muted);
   font-weight: var(--weight-medium);
 }
-/* สเปก: ยอดออกอยู่ล่าง สีจาง ขนาด caption */
-.amts .amt-out {
-  font-size: var(--size-caption);
-  font-weight: var(--weight-regular);
-}
 
 /* ---------- โลโก้ ---------- */
 
