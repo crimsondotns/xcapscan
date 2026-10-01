@@ -200,13 +200,11 @@ function MoneyRange({ label, a, b, f, set, idp }: { label: string; a: 'amtMin' |
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         {([a, b] as const).map((k, i) => (
           <InputGroup key={k} className={i ? 'col-start-3' : undefined}>
-            {/* ป้ายในช่อง (ไม่ใช่ placeholder — อยู่ตลอด): ต่ำสุด / สูงสุด */}
             <InputGroupAddon>
-              <InputGroupText>
-                {t(i ? 'af.max' : 'af.min')} $
-              </InputGroupText>
+              <InputGroupText>$</InputGroupText>
             </InputGroupAddon>
-            <InputGroupInput id={`${idp}-${k}`} aria-label={`${label} ${t(i ? 'af.max' : 'af.min')}`} type="text" inputMode="decimal" autoComplete="off" value={f[k]} onChange={(e) => set({ [k]: e.target.value })} />
+            {/* ข้อยกเว้น Zero hints ที่ผู้ใช้สั่ง (2026-10-01): placeholder ต่ำสุด/สูงสุด — ไม่จองที่ในช่อง */}
+            <InputGroupInput id={`${idp}-${k}`} placeholder={t(i ? 'af.max' : 'af.min')} aria-label={`${label} ${t(i ? 'af.max' : 'af.min')}`} type="text" inputMode="decimal" autoComplete="off" value={f[k]} onChange={(e) => set({ [k]: e.target.value })} />
           </InputGroup>
         ))}
         <span className="col-start-2 row-start-1 text-muted-foreground">–</span>
