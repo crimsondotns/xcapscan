@@ -5,7 +5,6 @@ import { endpointsFor, hasOlder, useFeed } from './useFeed';
 import { XCapMark } from './components/XCapMark';
 import { DatabaseIcon, SettingsIcon, ShieldCheckIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { ImportDialog } from './components/ImportDialog';
@@ -217,9 +216,6 @@ export function App() {
           <UploadIcon data-icon="inline-start" />
           <span className="hidden sm:inline">{t('wallets.import')}</span>
         </Button>
-        <Badge variant={hasEndpoint ? 'secondary' : 'outline'} className="hidden lg:inline-flex">
-          {hasEndpoint ? t('status.endpointSet', { n: enabledEps.length }) : t('status.noEndpoint')}
-        </Badge>
         <Button variant="ghost" size="icon" onClick={() => setVerifyOpen(true)} aria-label={t('slip.verify')} title={t('slip.verify')}>
           <ShieldCheckIcon />
         </Button>
