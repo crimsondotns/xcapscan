@@ -75,7 +75,8 @@ export function GroupRail(props: GroupNavProps) {
   const { t } = useI18n();
   const { fixed, tags, families } = useSections(props);
   const mobile = useIsMobile();
-  if (mobile) return null; // มือถือ: กลุ่มอยู่ในแผงซ้ายจากปุ่ม hamburger บนหัวเว็บ (GroupDrawer)
+  /* มือถือ: กลุ่มอยู่ในแผงซ้ายจากปุ่ม hamburger บนหัวเว็บ (GroupDrawer) */
+  if (mobile) return null;
   const btn = (item: Item) => (
     <button key={item.id} type="button" aria-selected={props.group === item.id} onClick={() => props.onChange(item.id)}>
       <ItemLabel item={item} />
