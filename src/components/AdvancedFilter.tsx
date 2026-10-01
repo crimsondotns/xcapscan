@@ -200,8 +200,11 @@ function MoneyRange({ label, a, b, f, set, idp }: { label: string; a: 'amtMin' |
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         {([a, b] as const).map((k, i) => (
           <InputGroup key={k} className={i ? 'col-start-3' : undefined}>
+            {/* ป้ายในช่อง (ไม่ใช่ placeholder — อยู่ตลอด): ต่ำสุด / สูงสุด */}
             <InputGroupAddon>
-              <InputGroupText>$</InputGroupText>
+              <InputGroupText>
+                {t(i ? 'af.max' : 'af.min')} $
+              </InputGroupText>
             </InputGroupAddon>
             <InputGroupInput id={`${idp}-${k}`} aria-label={`${label} ${t(i ? 'af.max' : 'af.min')}`} type="text" inputMode="decimal" autoComplete="off" value={f[k]} onChange={(e) => set({ [k]: e.target.value })} />
           </InputGroup>
