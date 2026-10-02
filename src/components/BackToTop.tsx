@@ -1,4 +1,4 @@
-/** ปุ่ม Back to top (ผู้ใช้ 2026-10-02) — ลอยมุมขวาล่าง ทั้งเดสก์ท็อปและมือถือ; ขึ้นเมื่อเลื่อนลงเกิน 1 จอ, เคารพ prefers-reduced-motion */
+/** ปุ่ม Back to top (ผู้ใช้ 2026-10-02) — ลอยมุมขวาล่าง ทั้งเดสก์ท็อปและมือถือ; จอกว้างชิดขอบขวาของเนื้อหา (ไม่ลอยไปขอบจอ); ขึ้นเมื่อเลื่อนลงเกิน 1 จอ, เคารพ prefers-reduced-motion */
 import { useEffect, useState } from 'react';
 import { ArrowUpIcon } from 'lucide-react';
 import { useI18n } from '../i18n';
@@ -29,7 +29,7 @@ export function BackToTop() {
       onClick={top}
       tabIndex={show ? 0 : -1}
       aria-hidden={!show}
-      className={cn('fixed right-4 size-11 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-10 rounded-full bg-background shadow-md transition-[opacity,translate] motion-reduce:transition-none sm:right-6 sm:bottom-6', show ? 'opacity-100' : 'pointer-events-none translate-y-2 opacity-0')}
+      className={cn('fixed right-4 size-11 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-10 rounded-full bg-background shadow-md transition-[opacity,translate] motion-reduce:transition-none sm:right-[max(1.5rem,calc((100vw-var(--layout-max))/2-3.75rem))] sm:bottom-6', show ? 'opacity-100' : 'pointer-events-none translate-y-2 opacity-0')}
     >
       <ArrowUpIcon />
     </Button>
