@@ -8,7 +8,7 @@ import type { ChainMap } from '../chains';
 import type { Wallet } from '../store';
 import type { GroupId } from '../groups';
 import { rowsOfToken, tokenSummary, withinDays } from '../flow';
-import { formatAmount, formatUsdExact } from '../format';
+import { formatAmountFull, formatUsdExact } from '../format';
 import { useI18n } from '../i18n';
 import { useCopy } from '../copy';
 import type { Range } from '../components/FlowChart';
@@ -61,7 +61,8 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
   const pending = (th.supported ? th.loading : loading) && list.length === 0;
   const mine = useMemo(() => (wallet && bal.data ? bal.data.rows.filter((r) => (byId ? r.tokenId.toLowerCase() === k : r.symbol === symbol)) : []), [wallet, bal.data, byId, k, symbol]);
   const top = mine[0] ?? null;
-  const mineTotal = mine.reduce((n, r) => n + r.amount, 0);
+  /* ผลรวมหลายเชน: ตัดเศษทศนิยมลอยตัว (0.1+0.2) ที่ 15 หลักนัยสำคัญ */
+  const mineTotal = Number(mine.reduce((n, r) => n + r.amount, 0).toPrecision(15));
   const mineUsd = mine.some((r) => r.usd !== null) ? mine.reduce((n, r) => n + (r.usd ?? 0), 0) : null;
   const topAddr = !!top && isTokenAddress(top.tokenId);
   /* Explorer = กระเป๋าของลูกค้า กรองเฉพาะโทเคนนี้ (ผู้ใช้ 2026-10-02) */
@@ -105,8 +106,9 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
                     <h2 id="mine-h" className="text-xs text-muted-foreground">
                       {t('bal.mine')}
                     </h2>
-                    <span className="truncate text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
-                      {formatAmount(mineTotal)} <span className="text-base font-medium text-muted-foreground">{top.symbol}</span>
+                    {/* ทศนิยมครบทุกหลัก (ผู้ใช้ 2026-10-02) — ตัวเลขยาวขึ้นบรรทัดใหม่แทนการตัด … */}
+                    <span className="text-2xl font-semibold tracking-tight break-all tabular-nums sm:text-3xl">
+                      {formatAmountFull(mineTotal)} <span className="text-base font-medium text-muted-foreground">{top.symbol}</span>
                     </span>
                     {mineUsd !== null && <span className="text-sm text-muted-foreground tabular-nums">≈ {formatUsdExact(mineUsd)}</span>}
                   </div>
