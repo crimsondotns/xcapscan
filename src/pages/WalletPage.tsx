@@ -96,7 +96,7 @@ export function WalletPage({
             { value: 'history', label: t('tab.history'), count: rows.length },
           ]}
         />
-        {tab === 'tokens' ? bal.supported ? <BalanceTable bal={bal} chains={chains} onToken={onToken} /> : <TokenTable rows={ranged} chains={chains} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} bulk={bulk} />}
+        {tab === 'tokens' ? bal.supported ? <BalanceTable bal={bal} chains={chains} onToken={onToken} /> : <TokenTable rows={ranged} chains={chains} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} onReload={onReload} bulk={bulk} />}
       </section>
       <TagDialog open={tagsOpen} wallet={wallet} onClose={() => setTagsOpen(false)} />
     </>

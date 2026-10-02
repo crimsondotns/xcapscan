@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
-import { SearchIcon } from 'lucide-react';
+import { RefreshCwIcon, SearchIcon } from 'lucide-react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { AdvancedFilterButton, loadAdv, saveAdv, AdvancedFilterChips, advFromTs, advMatches, DateFields, type AdvFilter } from './AdvancedFilter';
 import { TokenConds, passConds, liveConds, type TokenCond } from './BalanceFilter';
@@ -73,7 +73,7 @@ function mainMove(r: TxRow) {
   return real.find((m) => m.usd !== null) ?? real[0] ?? r.moves[0] ?? null;
 }
 
-export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, onToken, selected, onSelect, loading = false, hasMore = false, onMore, bulk }: { rows: TxRow[]; wallets: Wallet[]; chains: ChainMap; wallet: string; onWallet: (id: string) => void; onToken?: (symbol: string) => void; selected: string | null; onSelect: (r: TxRow) => void; loading?: boolean; hasMore?: boolean; onMore?: (opts?: OlderOpts) => void; bulk?: { count: number; seek: boolean } }) {
+export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, onToken, selected, onSelect, loading = false, hasMore = false, onMore, onReload, bulk }: { rows: TxRow[]; wallets: Wallet[]; chains: ChainMap; wallet: string; onWallet: (id: string) => void; onToken?: (symbol: string) => void; selected: string | null; onSelect: (r: TxRow) => void; loading?: boolean; hasMore?: boolean; onMore?: (opts?: OlderOpts) => void; onReload?: () => void; bulk?: { count: number; seek: boolean } }) {
   const { t } = useI18n();
   const { settings, setHideScam } = useStore();
   const hideScam = settings.hideScam;
@@ -287,6 +287,13 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
             {t('tx.hideScam')}
           </FieldLabel>
         </Field>
+        {/* ปุ่ม Reload ของกระเป๋า (เดิมอยู่ใน .headline ที่ถูกลบ) — แบบเดียวกับ Reload balance; มือถือเหลือไอคอนท้ายแถว */}
+        {onReload && (
+          <Button type="button" variant="ghost" disabled={loading} onClick={onReload} aria-label={t('tx.reload')} className="max-sm:ml-auto max-sm:size-8 max-sm:px-0">
+            <RefreshCwIcon data-icon="inline-start" />
+            <span className="max-sm:sr-only">{t('tx.reload')}</span>
+          </Button>
+        )}
         <span className="count" aria-live="polite">
           {t('tx.count', { n: filtered.length })}
         </span>
