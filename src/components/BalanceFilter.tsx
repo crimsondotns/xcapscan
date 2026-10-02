@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { FilterIcon, XIcon } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { cn } from '@/lib/utils';
 import { Dropdown, type DropdownOption } from './Dropdown';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,62 @@ function Form({ f, set, chains, idp }: { f: BalFilter; set: (p: Partial<BalFilte
         </div>
       </FieldSet>
     </FieldGroup>
+  );
+}
+
+/**
+ * ตัวกรองในหัวคอลัมน์ (จอ ≥640, ผู้ใช้ 2026-10-02) — ไอคอนกรวยข้างปุ่มเรียง เปิด Popover ของคอลัมน์นั้น
+ * ฉบับร่างเหมือนปุ่ม Filters: แก้แล้วกด Show N results; Reset ล้างเฉพาะคอลัมน์นี้
+ */
+export function ColumnFilter({ field, value, onChange, chains, countFor, label }: { field: 'chain' | 'usd'; value: BalFilter; onChange: (f: BalFilter) => void; chains: Array<DropdownOption<string>>; countFor: (f: BalFilter) => number; label: string }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const set = (p: Partial<BalFilter>) => setDraft((d) => ({ ...d, ...p }));
+  const active = field === 'chain' ? !!value.chain : !!(value.usdMin || value.usdMax);
+  const clear = field === 'chain' ? { chain: '' } : { usdMin: '', usdMax: '' };
+  const apply = () => {
+    onChange(draft);
+    setOpen(false);
+  };
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        if (o) setDraft(value);
+        setOpen(o);
+      }}
+      modal
+    >
+      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label={`${t('af.title')}: ${label}`} className={cn('-ml-1 align-middle', active ? 'text-primary' : 'text-muted-foreground')} />}>
+        <FilterIcon />
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={8} className="w-[320px] max-w-[calc(100vw-2rem)] gap-4 p-4 text-left">
+        <PopoverHeader className="flex-row items-center justify-between">
+          <PopoverTitle>{label}</PopoverTitle>
+          <Button variant="link" size="sm" className="px-0" onClick={() => set(clear)}>
+            {t('af.reset')}
+          </Button>
+        </PopoverHeader>
+        {field === 'chain' ? (
+          <Dropdown value={draft.chain} options={chains} onChange={(chain) => set({ chain })} label={t('bal.allChains')} className="w-full" />
+        ) : (
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            {(['usdMin', 'usdMax'] as const).map((k, i) => (
+              <InputGroup key={k} className={i ? 'col-start-3' : undefined}>
+                <InputGroupAddon>
+                  <InputGroupText>$</InputGroupText>
+                </InputGroupAddon>
+                {/* placeholder Min/Max = ข้อยกเว้น Zero hints ที่ผู้ใช้สั่ง */}
+                <InputGroupInput aria-label={`${label} ${t(i ? 'af.max' : 'af.min')}`} placeholder={t(i ? 'af.max' : 'af.min')} type="text" inputMode="decimal" autoComplete="off" value={draft[k]} onChange={(e) => set({ [k]: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && apply()} />
+              </InputGroup>
+            ))}
+            <span className="col-start-2 row-start-1 text-muted-foreground">–</span>
+          </div>
+        )}
+        <Button onClick={apply}>{t('af.show', { n: countFor(draft) })}</Button>
+      </PopoverContent>
+    </Popover>
   );
 }
 

@@ -19,7 +19,8 @@ import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { RefreshCwIcon, SearchIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { BAL_EMPTY, BalanceFilterButton, BalanceFilterChips, inUsdRange, type BalFilter } from './BalanceFilter';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { BAL_EMPTY, BalanceFilterButton, ColumnFilter, BalanceFilterChips, inUsdRange, type BalFilter } from './BalanceFilter';
 import { Logo } from './Logo';
 
 type SortKey = 'token' | 'amount' | 'price' | 'value';
@@ -33,6 +34,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
   const [bf, setBf] = useState<BalFilter>(BAL_EMPTY);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'value', dir: -1 });
   const head = useStickyHead();
+  const mobile = useIsMobile();
   const all = bal.data?.rows ?? [];
   const rows = useMemo(() => {
     const val = (r: BalanceRow) => (sort.key === 'token' ? r.symbol.toLowerCase() : sort.key === 'amount' ? r.amount : sort.key === 'price' ? (r.price ?? -1) : (r.usd ?? -1));
@@ -66,12 +68,14 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
   const total = rows.reduce((s, r) => s + (r.usd ?? 0), 0);
   const wait = Math.ceil(pausedFor() / 1000);
 
-  const Th = ({ k, label, num, fit }: { k: SortKey; label: string; num?: boolean; fit?: boolean }) => (
+  const countFor = (f: BalFilter) => all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, f.chain) && inUsdRange(r.usd, f)).length;
+  const Th = ({ k, label, num, fit, filter }: { k: SortKey; label: string; num?: boolean; fit?: boolean; filter?: 'chain' | 'usd' }) => (
     <TableHead scope="col" className={cn(num && 'num', fit && 'sm:w-px', fit && num && 'sm:pl-10')} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
       <Button type="button" variant="ghost" size="sm" className="-ml-2.5 font-medium text-muted-foreground" onClick={() => setSort((s) => (s.key === k ? { key: k, dir: s.dir === 1 ? -1 : 1 } : { key: k, dir: k === 'token' ? 1 : -1 }))}>
         {label}
         <Icon name={sort.key === k ? (sort.dir === 1 ? 'chevronUp' : 'chevronDown') : 'chevronsUpDown'} className="th-ico" />
       </Button>
+      {filter && !mobile && <ColumnFilter field={filter} label={filter === 'chain' ? t('tx.col.chain') : `${label} (USD)`} value={bf} onChange={setBf} chains={chainOpts} countFor={countFor} />}
     </TableHead>
   );
 
@@ -87,7 +91,8 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
           </InputGroupAddon>
           <InputGroupInput id="bal-q" name="bq" type="search" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
         </InputGroup>
-        <BalanceFilterButton value={bf} onChange={setBf} chains={chainOpts} countFor={(f) => all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, f.chain) && inUsdRange(r.usd, f)).length} />
+        {/* ปุ่ม Filters เฉพาะมือถือ — จอกว้างกรองจากหัวคอลัมน์ (ผู้ใช้ 2026-10-02) */}
+        {mobile && <BalanceFilterButton value={bf} onChange={setBf} chains={chainOpts} countFor={countFor} />}
         <Field orientation="horizontal" className="w-auto">
           <Switch id="bal-hide-scam" checked={hideScam} onCheckedChange={(v) => setHideScam(v)} />
           <FieldLabel htmlFor="bal-hide-scam" className="font-normal">
@@ -120,10 +125,10 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
           <Table containerClassName="lg:overflow-visible" className="tx bal">
             <TableHeader ref={head.ref} data-stuck={head.stuck}>
               <TableRow>
-                <Th k="token" label={t('tab.tokens')} fit />
+                <Th k="token" label={t('tab.tokens')} fit filter={chainOpts.length > 2 ? 'chain' : undefined} />
                 <Th k="amount" label={t('bal.col.amount')} num fit />
                 <Th k="price" label={t('bal.col.price')} num />
-                <Th k="value" label={t('bal.col.value')} num />
+                <Th k="value" label={t('bal.col.value')} num filter="usd" />
               </TableRow>
             </TableHeader>
             <TableBody>
