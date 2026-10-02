@@ -17,7 +17,7 @@ import { parseShare } from './slip';
 import { LangMenu } from './components/LangMenu';
 import { ThemeToggle } from './components/ThemeToggle';
 import { setProxy } from './proxy';
-import { navigate, useOpenParam, useRoute } from './router';
+import { navigate, useRoute } from './router';
 import { lastTime } from './flow';
 import { groupExists, matchesGroup, type GroupId } from './groups';
 import { GroupDrawer, GroupMenubar } from './components/GroupNav';
@@ -57,15 +57,20 @@ export function App() {
   const { feeds, loadMany, loadStaggered, cancelStaggered, progress, ensure, reset, forget, fillMeta } = useFeed(settings);
   const route = useRoute();
   const parsed = useMemo(() => parseRoute(route), [route]);
-  /* ไดอะล็อก Settings/Import มี path ของตัวเอง — ปิดแล้วกลับไปหน้าที่เปิดมา */
-  const open = useOpenParam();
+  /* ไดอะล็อก Settings/Import เป็น state ล้วน ไม่มี route/query (ผู้ใช้ 2026-10-02) */
+  const [open, setOpen] = useState<'settings' | 'import' | null>(null);
   const settingsOpen = open === 'settings';
   const importing = open === 'import';
-  const openDialog = useCallback((d: 'settings' | 'import') => navigate(`${route}?open=${d}`), [route]);
-  const closeDialog = useCallback(() => navigate(route), [route]);
-  /* ลิงก์เก่า /settings, /import → แดชบอร์ด + ?open= */
+  const openDialog = useCallback((d: 'settings' | 'import') => setOpen(d), []);
+  const closeDialog = useCallback(() => setOpen(null), []);
+  /* ลิงก์เก่า /settings, /import หรือ ?open= → แดชบอร์ด แล้วเปิดไดอะล็อกนั้น (ล้าง URL) */
   useEffect(() => {
-    if (parsed.dialog) navigate(`?open=${parsed.dialog}`, true);
+    const q = new URLSearchParams(location.search).get('open');
+    const d = parsed.dialog ?? (q === 'settings' || q === 'import' ? q : null);
+    if (!d) return;
+    setOpen(d);
+    navigate(parsed.dialog ? '' : route, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsed.dialog]);
   const pageWallet = parsed.wallet;
   const pageToken = parsed.token;

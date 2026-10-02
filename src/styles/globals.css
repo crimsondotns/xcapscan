@@ -142,21 +142,44 @@ th.num > [data-slot='button'] {
   overscroll-behavior: contain;
 }
 
-/* หัวตาราง (ผู้ใช้ 2026-10-02): ไม่มีเส้นใต้/เงา และสูงพอดีตัวอักษร */
+/* หัวตาราง (ผู้ใช้ 2026-10-02): ไม่มีเส้นใต้ สูงพอดีตัวอักษร — เงานุ่มใต้หัวเฉพาะตอนติดบนจอ (data-stuck) */
 [data-slot='table-header'] tr {
   border-bottom: 0;
 }
 .tx th,
 [data-slot='table-head'] {
   height: auto;
-  padding-top: var(--space-1);
-  padding-bottom: var(--space-1);
-}
-.tx thead[data-stuck='true'] th {
-  box-shadow: none;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
 }
 .tx th > [data-slot='button'] {
   height: auto;
   padding-top: 0;
   padding-bottom: 0;
+}
+/* หัวตารางติดจอทั้งแถว (thead) แทนทีละ th — เงานุ่มใต้หัวจึงเป็นแผ่นเดียว ไม่มีรอยต่อ/เส้นตั้งระหว่างช่อง */
+@media (min-width: 1024px) {
+  .tx thead {
+    position: sticky;
+    top: 64px;
+    z-index: 2;
+    background: var(--background);
+    transition: filter var(--motion-base) var(--easing-standard);
+  }
+  .tx th {
+    position: static;
+  }
+  /* box-shadow ไม่วาดบน thead ใน Chrome → drop-shadow จากพื้นของทั้งแถว = เงาแผ่นเดียว */
+  .tx thead[data-stuck='true'] {
+    filter: drop-shadow(0 4px 6px color-mix(in oklch, var(--foreground) 10%, transparent));
+  }
+}
+.tx thead[data-stuck='true'] th {
+  box-shadow: none;
+  clip-path: none;
+}
+/* ตัวอักษรหัวตาราง = ขนาดตัวหนังสือของตาราง (ปุ่มเรียง size sm บังคับ 0.8rem) */
+.tx th,
+.tx th > [data-slot='button'] {
+  font-size: var(--size-body);
 }

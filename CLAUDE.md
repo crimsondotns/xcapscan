@@ -33,7 +33,7 @@ Never collapses. Each row is a button: click = switch the active wallet (table f
 - Never hardcode or name any external history source in code, comments, docs or tests — the user pastes URLs at runtime. `pnpm check` enforces this.
 - Chain names/logos/explorer links come from the user-pasted **Chain list URL** in Settings first, then `<origin of each pasted source>/v1/chain/list` (`src/chains.ts`), cached 24h; failure is silent (lettered fallback). No chain list host may be hardcoded or bundled. Chain logo priority: chain list → feed `chain_logo_url` → initials; never the native token's logo.
 - Data sources are added from a URL only: name and chain family are auto-detected (`detectEndpoint` in `store.ts`); never add manual name/chain fields back.
-- **Zero hints to the client.** No placeholder text, helper text, example URLs, placeholder syntax (`{address}` etc.), chain explanations or request previews in the UI or README. Labels only; errors are generic ("Invalid URL"). The user is expected to know. Only exception (user, 2026-10-01): the Min / Max placeholders of the amount/fee range inputs in the advanced filter.
+- **Zero hints to the client.** No placeholder text, helper text, example URLs, placeholder syntax (`{address}` etc.), chain explanations or request previews in the UI or README. Labels only; errors are generic ("Invalid URL"). The user is expected to know. Only exception (user, 2026-10-01/02): the Min / Max placeholders of range inputs — amount/fee in the advanced filter and USD value in the balance table.
 - All UI text goes through `t()` in `src/i18n.tsx` (Thai key + English pair). No literal Thai in `.tsx`.
 - No `px` font-size in CSS; use `--size-*` tokens. No gradients.
 - Icons are lucide-react: import from `lucide-react` directly in new code (`data-icon` inside buttons); `components/Icon.tsx` is a name→lucide map kept for existing callers.
@@ -72,7 +72,7 @@ Do not declare work done while any of these is red.
 
 - `components/Skeleton.tsx` (ห่อ shadcn `Skeleton`): `SkeletonRows` (แถวสูง 64px เท่าแถวจริง) ใช้ในตารางธุรกรรมตอนโหลดครั้งแรก, `SkeletonBar` ในช่องของตารางกระเป๋าตอนกระเป๋านั้นโหลด
 - ปุ่ม Import file อยู่ที่หัวตารางกระเป๋า คู่กับ Add/Clear (ย้ายออกจากหัวเว็บ ผู้ใช้ 2026-10-01)
-- หัวคอลัมน์ตาราง: ไม่มีเส้นใต้/เงา สูงพอดีตัวอักษร (padding 4px, ปุ่มเรียงไม่มีความสูงตายตัว — ผู้ใช้ 2026-10-02), เซลล์ 12px
+- หัวคอลัมน์ตาราง: ไม่มีเส้นใต้ padding แนวตั้ง 8px ตัวอักษรขนาดเดียวกับเนื้อตาราง; จอ ≥1024 ทั้ง `thead` ติดใต้หัวเว็บ + เงานุ่มแผ่นเดียว (`filter: drop-shadow` — box-shadow บน thead ไม่วาด, เงาต่อ th มีรอยต่อ) — ผู้ใช้ 2026-10-02; เซลล์ 12px
 
 ## แผงขวา + Settings (2026-09-22)
 
