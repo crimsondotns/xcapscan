@@ -69,8 +69,9 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
   const wait = Math.ceil(pausedFor() / 1000);
 
   const countFor = (f: BalFilter) => all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, f.chain) && inUsdRange(r.usd, f)).length;
-  const Th = ({ k, label, num, fit, filter }: { k: SortKey; label: string; num?: boolean; fit?: boolean; filter?: 'chain' | 'usd' }) => (
-    <TableHead scope="col" className={cn(num && 'num', fit && 'sm:w-px', fit && num && 'sm:pl-10')} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+  /* Token กินที่เหลือ · ตัวเลข 3 คอลัมน์กว้างเท่ากัน 18% (ผู้ใช้ 2026-10-02) */
+  const Th = ({ k, label, num, filter }: { k: SortKey; label: string; num?: boolean; filter?: 'chain' | 'usd' }) => (
+    <TableHead scope="col" className={cn(num && 'num sm:w-[18%]')} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
       <Button type="button" variant="ghost" size="sm" className="-ml-2.5 font-medium text-muted-foreground" onClick={() => setSort((s) => (s.key === k ? { key: k, dir: s.dir === 1 ? -1 : 1 } : { key: k, dir: k === 'token' ? 1 : -1 }))}>
         {label}
         <Icon name={sort.key === k ? (sort.dir === 1 ? 'chevronUp' : 'chevronDown') : 'chevronsUpDown'} className="th-ico" />
@@ -125,8 +126,8 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
           <Table containerClassName="lg:overflow-visible" className="tx bal">
             <TableHeader ref={head.ref} data-stuck={head.stuck}>
               <TableRow>
-                <Th k="token" label={t('tab.tokens')} fit filter={chainOpts.length > 2 ? 'chain' : undefined} />
-                <Th k="amount" label={t('bal.col.amount')} num fit />
+                <Th k="token" label={t('tab.tokens')} filter={chainOpts.length > 2 ? 'chain' : undefined} />
+                <Th k="amount" label={t('bal.col.amount')} num />
                 <Th k="price" label={t('bal.col.price')} num />
                 <Th k="value" label={t('bal.col.value')} num filter="usd" />
               </TableRow>
@@ -149,7 +150,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
                     }}
                   >
                     {/* มือถือ: กินที่เหลือ (ตัด …); จอใหญ่: กว้างพอดีเนื้อหา ให้คอลัมน์ตัวเลขแบ่งที่ที่เหลือ — ไม่เว้นช่องโล่งก่อน Amount (ผู้ใช้ 2026-10-02) */}
-                    <TableCell className="max-sm:w-full max-sm:max-w-0 sm:w-px sm:pr-10">
+                    <TableCell className="max-sm:w-full max-sm:max-w-0">
                       <span className="who">
                         <TokenLogo token={r.logo} tokenName={r.symbol} chain={chain?.logo ?? null} chainName={chain?.name ?? r.chain} size={28} />
                         <span className="act-text min-w-0">
@@ -165,7 +166,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
                         </span>
                       </span>
                     </TableCell>
-                    <TableCell className="num sm:w-px sm:pl-10">{formatAmount(r.amount)}</TableCell>
+                    <TableCell className="num">{formatAmount(r.amount)}</TableCell>
                     <TableCell className="num">{formatPrice(r.price)}</TableCell>
                     <TableCell className="num">
                       <span className="amts">
