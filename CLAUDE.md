@@ -107,7 +107,7 @@ Do not declare work done while any of these is red.
 - คอลัมน์ Token · Amount · Price · Value (เรียงตาม Value) มือถือเหลือ Token · Value (จำนวนใต้มูลค่า); Hide suspicious ซ่อนโทเคนที่ `is_verified === false`
 - กระเป๋า Solana / ไม่มีแหล่ง ERC-20 → แท็บ Tokens ยังเป็นสรุปเข้า-ออกจากประวัติ (`TokenTable`) เหมือนเดิม
 - ตาราง Balance: ช่องค้นหา (symbol/name มีคำนี้ หรือ token address ขึ้นต้นด้วย — `matchBalance`) + ปุ่ม **Filters** (`components/BalanceFilter.tsx`: เชน + ช่วงมูลค่า USD, ฉบับร่าง + Show N results, ชิปลบได้; Popover / Drawer บนมือถือ — ผู้ใช้ 2026-10-02)
-- หน้าโทเคน (`AssetPage`, เปิดจากกระเป๋า) มีการ์ด **My balance** ต่อเชน: จำนวน · ≈ USD · contract (คัดลอก + "View on explorer" `<explorer>/token/<address>`) หรือป้ายเหรียญหลัก — เป็นหน้า ไม่ใช่ Dialog (ผู้ใช้ 2026-10-02); ใช้ `useBalances` (แคชเดียวกับแท็บ Tokens)
+- หน้าโทเคน (`AssetPage`, เปิดจากกระเป๋า) มีการ์ด **My balance** แบบ A (mockup `mockups/balance-card.html`, ผู้ใช้เลือก 2026-10-02): โลโก้ · "My balance" · จำนวนตัวใหญ่ + สัญลักษณ์ · ≈ USD (รวมทุกเชน); ปุ่ม Copy address + Explorer (`<explorer>/token/<address>`) ด้านขวาบนจอกว้าง ใต้ตัวเลขบนมือถือ — ไม่มีชิปเชน/ข้อความ contract; เหรียญหลักไม่มีปุ่ม — เป็นหน้า ไม่ใช่ Dialog (ผู้ใช้ 2026-10-02); ใช้ `useBalances` (แคชเดียวกับแท็บ Tokens)
 - หน้าโทเคน: path พก token address (`#/wallet/<id>/token/<tokenId>`; symbol ยังเปิดได้สำหรับลิงก์เก่า) และขอประวัติจากแหล่ง ERC-20 โดยตรงด้วย `chain_id` + `token_id` ต่อท้ายแม่แบบประวัติ (`src/tokenFeed.ts`) เลื่อนโหลดต่อด้วย cursor เดิม — ไม่ไล่ประวัติทั้งกระเป๋า (ผู้ใช้ 2026-10-02)
 
 ## เอาออกแล้ว (ผู้ใช้ 2026-10-02)

@@ -26,7 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
-import { CopyIcon } from 'lucide-react';
+import { CopyIcon, GlobeIcon } from 'lucide-react';
 import { useBalances } from '../balances';
 import { useTokenHistory } from '../tokenFeed';
 import { useStore } from '../store';
@@ -67,6 +67,10 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
   const pending = (th.supported ? th.loading : loading) && list.length === 0;
   const mine = useMemo(() => (wallet && bal.data ? bal.data.rows.filter((r) => (byId ? r.tokenId.toLowerCase() === k : r.symbol === symbol)) : []), [wallet, bal.data, byId, k, symbol]);
   const top = mine[0] ?? null;
+  const mineTotal = mine.reduce((n, r) => n + r.amount, 0);
+  const mineUsd = mine.some((r) => r.usd !== null) ? mine.reduce((n, r) => n + (r.usd ?? 0), 0) : null;
+  const topAddr = !!top && /^0x[0-9a-f]{40}$/i.test(top.tokenId);
+  const topHost = top ? chainOf(chains, top.chain)?.explorer?.replace(/\/+$/, '') : undefined;
   const chain = chainOf(chains, token?.chain ?? top?.chain ?? tokenChain ?? '') ?? undefined;
   const price = top?.price ?? (token ? priceOf(token.chain, token.tokenId, token.symbol) : null);
   const holders = useMemo(() => {
@@ -100,61 +104,39 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
       </Breadcrumb>
       <section className="panel">
         {wallet && bal.supported && (mine.length > 0 || bal.loading) && (
-          <section aria-labelledby="mine-h" className="flex flex-col gap-2">
-            <h2 id="mine-h" className="text-sm text-muted-foreground">
-              {t('bal.mine')}
-            </h2>
-            {mine.length === 0 ? (
-              <SkeletonRows rows={1} cols={[160, 120]} />
+          /* การ์ด My balance แบบ A (ผู้ใช้ 2026-10-02): ตัวเลขใหญ่ + ≈ USD; ปุ่มคัดลอก/explorer ด้านขวาบนจอกว้าง — ไม่มีชิปเชน/ข้อความ contract */
+          <section aria-labelledby="mine-h" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            {mine.length === 0 || !top ? (
+              <SkeletonRows rows={1} cols={[200]} />
             ) : (
-              <Table>
-                <TableBody>
-                  {mine.map((r) => {
-                    const c = chainOf(chains, r.chain);
-                    /* เหรียญหลัก = id เท่ากับชื่อเชน / ไม่ใช่ที่อยู่ 0x; ลิงก์ explorer เฉพาะที่อยู่เต็ม */
-                    const isAddr = r.tokenId.startsWith('0x') && r.tokenId !== r.chain;
-                    const fullAddr = /^0x[0-9a-f]{40}$/i.test(r.tokenId);
-                    const host = c?.explorer?.replace(/\/+$/, '');
-                    return (
-                      <TableRow key={`${r.chain}:${r.tokenId}`}>
-                        <TableCell>
-                          <span className="who">
-                            <TokenLogo token={r.logo} tokenName={r.symbol} chain={c?.logo ?? null} chainName={c?.name ?? r.chain} size={32} />
-                            <span className="act-text min-w-0">
-                              <span className="act-title truncate">
-                                {formatAmount(r.amount)} {r.symbol}
-                              </span>
-                              <span className="act-sub truncate">{r.usd !== null ? `≈ ${formatUsdExact(r.usd)}` : c?.name ?? r.chain}</span>
-                            </span>
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {isAddr ? (
-                            <span className="inline-flex items-center gap-1">
-                              <span className="sr-only">{t('bal.contract')}</span>
-                              <span className="mono text-muted-foreground" title={r.tokenId}>
-                                {shortAddr(r.tokenId)}
-                              </span>
-                              <Button type="button" variant="ghost" size="icon-xs" onClick={() => copy(r.tokenId)} aria-label={t('token.copyAddress', { sym: r.symbol })} title={t('token.copyAddress', { sym: r.symbol })}>
-                                <CopyIcon />
-                              </Button>
-                              {host && fullAddr && (
-                                <Button variant="ghost" size="xs" render={<a href={`${host}/token/${r.tokenId}`} target="_blank" rel="noopener noreferrer" />}>
-                                  {t('bal.viewExplorer')}
-                                </Button>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground" title={t('token.native')}>
-                              {t('bal.native')}
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <>
+                <div className="flex items-center gap-3">
+                  <TokenLogo token={top.logo} tokenName={top.symbol} chain={chainOf(chains, top.chain)?.logo ?? null} chainName={chainOf(chains, top.chain)?.name ?? top.chain} size={44} />
+                  <div className="flex min-w-0 flex-col">
+                    <h2 id="mine-h" className="text-xs text-muted-foreground">
+                      {t('bal.mine')}
+                    </h2>
+                    <span className="truncate text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
+                      {formatAmount(mineTotal)} <span className="text-base font-medium text-muted-foreground">{top.symbol}</span>
+                    </span>
+                    {mineUsd !== null && <span className="text-sm text-muted-foreground tabular-nums">≈ {formatUsdExact(mineUsd)}</span>}
+                  </div>
+                </div>
+                {topAddr && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" onClick={() => copy(top.tokenId)}>
+                      <CopyIcon data-icon="inline-start" />
+                      {t('bal.copyAddress')}
+                    </Button>
+                    {topHost && (
+                      <Button variant="outline" render={<a href={`${topHost}/token/${top.tokenId}`} target="_blank" rel="noopener noreferrer" />}>
+                        <GlobeIcon data-icon="inline-start" />
+                        {t('bal.explorer')}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </section>
         )}
