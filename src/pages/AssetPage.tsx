@@ -102,17 +102,18 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <section className="panel">
+      {/* ใต้ breadcrumb: ไม่ซ้อน padding บนของการ์ดกับ gap ของ stack; มือถือชิดขอบหน้าเท่าหัวเว็บ (เหมือน WalletPage) */}
+      <section className="panel pt-0 max-sm:px-0">
         {wallet && bal.supported && (mine.length > 0 || bal.loading) && (
           /* การ์ด My balance แบบ A (ผู้ใช้ 2026-10-02): ตัวเลขใหญ่ + ≈ USD; ปุ่มคัดลอก/explorer ด้านขวาบนจอกว้าง — ไม่มีชิปเชน/ข้อความ contract */
-          <section aria-labelledby="mine-h" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <section aria-labelledby="mine-h" className="mb-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {mine.length === 0 || !top ? (
               <SkeletonRows rows={1} cols={[200]} />
             ) : (
               <>
-                <div className="flex items-center gap-3">
-                  <TokenLogo token={top.logo} tokenName={top.symbol} chain={chainOf(chains, top.chain)?.logo ?? null} chainName={chainOf(chains, top.chain)?.name ?? top.chain} size={44} />
-                  <div className="flex min-w-0 flex-col">
+                <div className="flex items-center gap-4">
+                  <TokenLogo token={top.logo} tokenName={top.symbol} chain={chainOf(chains, top.chain)?.logo ?? null} chainName={chainOf(chains, top.chain)?.name ?? top.chain} size={48} />
+                  <div className="flex min-w-0 flex-col gap-0.5">
                     <h2 id="mine-h" className="text-xs text-muted-foreground">
                       {t('bal.mine')}
                     </h2>
