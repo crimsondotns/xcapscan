@@ -32,6 +32,9 @@ export function solTokenTemplate(url: string, mint: string): string | null {
   }
 }
 
+/** แม่แบบที่เลื่อนหน้าได้ต้องมีช่อง cursor/offset/next/start อย่างใดอย่างหนึ่ง */
+const PAGED = /\{(cursor|offset|next|start)\}/;
+
 export interface TokenHistory {
   supported: boolean;
   rows: TxRow[];
@@ -53,6 +56,7 @@ export function useTokenHistory(wallet: Wallet | null, endpoints: Endpoint[], ch
   const [limited, setLimited] = useState(false);
   const [done, setDone] = useState(false);
   const busy = useRef(false);
+  const rowsRef = useRef<TxRow[]>([]);
   const live = useRef(key);
 
   const load = useCallback(
@@ -66,12 +70,13 @@ export function useTokenHistory(wallet: Wallet | null, endpoints: Endpoint[], ch
         const ids = ep!.metaUrl ? unknownTokens(raw.rows) : [];
         const page = ids.length ? { ...raw, rows: applyTokenMeta(raw.rows, await ensureTokenMeta(ep!, ids)) } : raw;
         if (live.current !== k) return;
-        setRows((r) => {
-          const seen = new Set(r.map((x) => x.key));
-          return [...r, ...page.rows.filter((x) => !seen.has(x.key))];
-        });
+        const seen = new Set(rowsRef.current.map((x) => x.key));
+        const fresh = page.rows.filter((x) => !seen.has(x.key));
+        rowsRef.current = [...rowsRef.current, ...fresh];
+        setRows(rowsRef.current);
         setNext(page.next);
-        setDone(!page.next || page.rows.length === 0);
+        /* หยุดเมื่อ: แหล่งไม่ให้หน้าถัดไป · ไม่มีแถวใหม่ (ได้หน้าเดิมซ้ำ) · แม่แบบไม่มีช่องเลื่อนหน้า (ขอซ้ำก็ได้ URL เดิม) — กันยิงวนไม่จบ */
+        setDone(!page.next || fresh.length === 0 || !PAGED.test(tpl!));
       } catch (e) {
         if (live.current !== k) return;
         if (e instanceof FeedError && e.status === 429) setLimited(true);
@@ -88,6 +93,7 @@ export function useTokenHistory(wallet: Wallet | null, endpoints: Endpoint[], ch
   useEffect(() => {
     live.current = key;
     busy.current = false;
+    rowsRef.current = [];
     setRows([]);
     setNext(null);
     setDone(false);
