@@ -37,6 +37,7 @@ test('source: first enabled ERC-20 endpoint origin; Solana wallets and Solana so
   assert.equal(balanceSource(list, { family: 'erc20' })?.origin, 'https://src.invalid');
   assert.equal(balanceSource(list, { family: 'sol' }), null);
   assert.equal(balanceSource([ep({ family: 'sol' })], { family: 'erc20' }), null);
+  assert.equal(balanceSource([ep({ url: 'b/h' })], { family: 'erc20' })?.origin, 'b', 'wrapper alias');
 });
 
 test('429 mid-way: stops, returns what it has, flags limited', async () => {
