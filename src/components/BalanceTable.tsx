@@ -1,10 +1,9 @@
 /** ยอดคงเหลือรายโทเคนของกระเป๋า (แท็บ Tokens เมื่อมีแหล่งตระกูลเดียวกับกระเป๋า) — คลิกแถวเพื่อไปหน้าโทเคนนั้น */
 import { useMemo, useState } from 'react';
-import { isTokenAddress, walletTokenUrl, type BalanceState, type BalanceRow } from '../balances';
-import { useCopy } from '../copy';
+import { type BalanceState, type BalanceRow } from '../balances';
 import { formatAmount, formatPrice, formatUsdExact } from '../format';
 import { useI18n } from '../i18n';
-import { useStore, type Wallet } from '../store';
+import { useStore } from '../store';
 import { chainOf, type ChainMap } from '../chains';
 import { pausedFor } from '../limiter';
 import { TokenLogo } from './Logo';
@@ -17,7 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
-import { CopyIcon, ExternalLinkIcon, RefreshCwIcon } from 'lucide-react';
+import { RefreshCwIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { BAL_EMPTY, BalanceFilterButton, ColumnFilter, BalanceFilterChips, passBal, type BalFilter } from './BalanceFilter';
@@ -25,8 +24,7 @@ import { Logo } from './Logo';
 
 type SortKey = 'token' | 'amount' | 'price' | 'value';
 
-export function BalanceTable({ bal, chains, onToken, wallet }: { bal: BalanceState; chains: ChainMap; onToken: (tokenKey: string) => void; wallet: Pick<Wallet, 'address' | 'family'> }) {
-  const copy = useCopy();
+export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chains: ChainMap; onToken: (tokenKey: string) => void }) {
   const { t } = useI18n();
   const { settings, setHideScam } = useStore();
   const hideScam = settings.hideScam;
@@ -121,16 +119,12 @@ export function BalanceTable({ bal, chains, onToken, wallet }: { bal: BalanceSta
                 <Th k="amount" label={t('bal.col.amount')} num />
                 <Th k="price" label={t('bal.col.price')} num />
                 <Th k="value" label={t('bal.col.value')} num filter="usd" />
-                <TableHead scope="col" className="w-px max-sm:hidden">
-                  <span className="sr-only">{t('bal.actions')}</span>
-                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bal.loading && rows.length === 0 && <SkeletonRows rows={5} cols={[150, 90, 90, 90, 56]} />}
+              {bal.loading && rows.length === 0 && <SkeletonRows rows={5} cols={[150, 90, 90, 90]} />}
               {rows.map((r) => {
                 const chain = chainOf(chains, r.chain);
-                const url = walletTokenUrl(chain?.explorer, wallet.family, wallet.address, r.tokenId);
                 return (
                   <TableRow
                     key={`${r.chain}:${r.tokenId}`}
@@ -168,21 +162,6 @@ export function BalanceTable({ bal, chains, onToken, wallet }: { bal: BalanceSta
                         <span>{r.usd !== null ? formatUsdExact(r.usd) : '—'}</span>
                         {/* มือถือ: คอลัมน์ Amount ถูกซ่อน → จำนวนเป็นบรรทัดรองใต้มูลค่า */}
                         <span className="amt-out sm:hidden">{formatAmount(r.amount)}</span>
-                      </span>
-                    </TableCell>
-                    {/* คัดลอกที่อยู่โทเคน · เปิด explorer ที่กระเป๋าของลูกค้ากรองเฉพาะโทเคนนี้ (ผู้ใช้ 2026-10-02) — ไม่เปิดหน้าโทเคน */}
-                    <TableCell className="max-sm:hidden">
-                      <span className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                        {isTokenAddress(r.tokenId) && (
-                          <Button type="button" variant="ghost" size="icon-sm" aria-label={t('bal.copyAddress')} title={t('bal.copyAddress')} onClick={() => copy(r.tokenId)}>
-                            <CopyIcon />
-                          </Button>
-                        )}
-                        {url && (
-                          <Button variant="ghost" size="icon-sm" aria-label={t('bal.explorer')} title={t('bal.explorer')} render={<a href={url} target="_blank" rel="noopener noreferrer" />}>
-                            <ExternalLinkIcon />
-                          </Button>
-                        )}
                       </span>
                     </TableCell>
                   </TableRow>

@@ -104,8 +104,6 @@ th.num > [data-slot='button']:not(:last-child) {
   .tx.bal th:nth-child(4),
   .tx.bal td:nth-child(4) {
     display: table-cell;
-    /* คอลัมน์ปุ่ม (ที่ 5) ซ่อนบนมือถือ → Value เป็นคอลัมน์สุดท้ายที่เห็น ชิดขอบขวาเหมือน last-child */
-    padding-right: 0;
   }
   /* ตัวเลขสรุป: ไม่มี padding ซ้อนกับ gap ของกริด */
   .stat {
