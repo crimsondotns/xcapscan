@@ -148,7 +148,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   const oldest = useMemo(() => rows.reduce((m, r) => (wallet && r.walletId !== wallet ? m : Math.min(m, r.time)), Number.POSITIVE_INFINITY), [rows, wallet]);
   const covered = fromTs !== null && oldest <= fromTs;
   /* กันโดน 429: หน้าละใหญ่ (sol 100 แถว), ไม่ขอ metadata ระหว่างไล่, เว้น AUTO_GAP_MS ระหว่างหน้า,
-     แหล่งที่เลื่อนหน้าด้วยเวลา (rabby: start_time) กระโดดไปวันสิ้นสุดของช่วงเลย ไม่ไล่ผ่านหน้าที่ใหม่กว่า,
+     แหล่งที่เลื่อนหน้าด้วยเวลา (start_time) กระโดดไปวันสิ้นสุดของช่วงเลย ไม่ไล่ผ่านหน้าที่ใหม่กว่า,
      คิวคำขอกำลังพัก (โดน 429) → หยุด ไม่ยิงต่อ */
   const MAX_PAGES = 10;
   const AUTO_GAP_MS = 2500;
