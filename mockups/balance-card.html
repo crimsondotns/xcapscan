@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Balance Card</title>
+<style>
+  :root {
+    --background: oklch(1 0 0); --foreground: oklch(0.145 0 0); --card: oklch(1 0 0);
+    --muted: oklch(0.97 0 0); --muted-foreground: oklch(0.556 0 0); --border: oklch(0.922 0 0);
+    --primary: oklch(0.205 0 0); --primary-foreground: oklch(0.985 0 0); --secondary: oklch(0.97 0 0);
+    --positive: oklch(0.627 0.17 149.2); --ring: oklch(0.708 0 0); --radius: 0.625rem;
+    --page: oklch(0.985 0 0);
+    font-family: 'Suisse Intl', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) {
+    --background: oklch(0.145 0 0); --foreground: oklch(0.985 0 0); --card: oklch(0.205 0 0);
+    --muted: oklch(0.269 0 0); --muted-foreground: oklch(0.708 0 0); --border: oklch(1 0 0 / 10%);
+    --primary: oklch(0.922 0 0); --primary-foreground: oklch(0.205 0 0); --secondary: oklch(0.269 0 0);
+    --positive: oklch(0.792 0.209 151.7); --page: oklch(0.11 0 0);
+  } }
+  :root[data-theme='dark'] {
+    --background: oklch(0.145 0 0); --foreground: oklch(0.985 0 0); --card: oklch(0.205 0 0);
+    --muted: oklch(0.269 0 0); --muted-foreground: oklch(0.708 0 0); --border: oklch(1 0 0 / 10%);
+    --primary: oklch(0.922 0 0); --primary-foreground: oklch(0.205 0 0); --secondary: oklch(0.269 0 0);
+    --positive: oklch(0.792 0.209 151.7); --page: oklch(0.11 0 0);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; overflow-x: clip; }
+  body { background: var(--page); color: var(--foreground); font-size: 14px; }
+  button { font: inherit; color: inherit; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted-foreground); }
+
+  /* ---------- toolbar ---------- */
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+    padding: 12px 16px; background: var(--background); border-bottom: 1px solid var(--border); }
+  .bar h1 { font-size: 15px; margin: 0 8px 0 0; font-weight: 600; }
+  .seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--muted); }
+  .seg button { border: 0; background: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; color: var(--muted-foreground); font-size: 13px; }
+  .seg button[aria-pressed='true'] { background: var(--background); color: var(--foreground); box-shadow: 0 1px 2px oklch(0 0 0 / 0.08); }
+  .seg button:focus-visible, .btn:focus-visible, .icon:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .lbl { font-size: 12px; color: var(--muted-foreground); }
+
+  /* ---------- stage ---------- */
+  main { padding: 24px 16px 64px; display: flex; flex-direction: column; gap: 40px; }
+  .variant h2 { font-size: 15px; margin: 0 0 4px; }
+  .variant p.desc { margin: 0 0 14px; color: var(--muted-foreground); font-size: 13px; max-width: 70ch; }
+  .frames { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+  .frame { flex: none; container-type: inline-size; background: var(--background); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .frame-cap { font-size: 11px; color: var(--muted-foreground); margin: 0 0 6px 2px; }
+  .frame-wrap { flex: none; }
+  .ctx { font-size: 13px; color: var(--muted-foreground); margin-bottom: 14px; }
+  .ctx b { color: var(--foreground); font-size: 18px; font-weight: 600; display: block; }
+
+  /* ---------- shared bits ---------- */
+  .logo { position: relative; flex: none; border-radius: 999px; background: oklch(0.72 0.15 160); color: #fff;
+    display: inline-grid; place-items: center; font-weight: 700; }
+  .logo .badge { position: absolute; right: -3px; bottom: -3px; width: 45%; height: 45%; border-radius: 999px;
+    border: 2px solid var(--background); display: grid; place-items: center; font-size: 8px; color: #fff; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--background); cursor: pointer; font-size: 13px; font-weight: 500; text-decoration: none; color: var(--foreground); white-space: nowrap; }
+  .btn:hover { background: var(--muted); }
+  .btn.ghost { border-color: transparent; background: none; }
+  .btn.ghost:hover { background: var(--muted); }
+  .icon { text-decoration: none; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; border: 0; background: none; cursor: pointer; color: var(--muted-foreground); }
+  .icon:hover { background: var(--muted); color: var(--foreground); }
+  svg { width: 16px; height: 16px; flex: none; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px 0 4px; border-radius: 999px; background: var(--secondary); font-size: 12px; white-space: nowrap; }
+  .dot { width: 16px; height: 16px; border-radius: 999px; display: inline-grid; place-items: center; color: #fff; font-size: 8px; font-weight: 700; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .bar-track { height: 6px; border-radius: 999px; background: var(--muted); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; background: var(--foreground); }
+  .copied { color: var(--positive) !important; }
+  .sep { height: 1px; background: var(--border); border: 0; margin: 0; }
+
+  /* A — Hero */
+  .A { display: flex; flex-direction: column; gap: 16px; }
+  .A .top { display: flex; align-items: center; gap: 12px; }
+  .A .amt { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+  .A .usd { font-size: 15px; color: var(--muted-foreground); }
+  .A .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .A .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  @container (min-width: 640px) {
+    .A { flex-direction: row; align-items: center; justify-content: space-between; }
+    .A .amt { font-size: 34px; }
+  }
+
+  /* B — Stat strip */
+  .B .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+  .B .k { font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px; }
+  .B .v { font-size: 18px; font-weight: 600; }
+  .B .s { font-size: 12px; color: var(--muted-foreground); margin-top: 2px; }
+  .B .foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+  @container (min-width: 640px) { .B .grid { grid-template-columns: repeat(4, 1fr); } }
+
+  /* C — Per-chain list */
+  .C .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .C .head b { font-size: 22px; font-weight: 600; }
+  .C .row { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; }
+  .C .row + .row { border-top: 1px solid var(--border); }
+  .C .row .bar-track { grid-column: 2 / 4; grid-row: 2; }
+  .C .row .val { grid-column: 3; grid-row: 1; }
+  .C .row .logo { grid-row: 1 / 3; }
+  .C .row .contract { display: none; }
+  @container (min-width: 640px) {
+    .C .row { grid-template-columns: auto 160px 1fr auto auto; }
+    .C .row .bar-track, .C .row .val, .C .row .logo { grid-column: auto; grid-row: auto; }
+    .C .row .contract { display: inline-flex; align-items: center; gap: 2px; }
+  }
+
+  /* D — Token sheet */
+  .D dl { margin: 0; display: grid; grid-template-columns: 1fr; }
+  .D .r { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 0; }
+  .D .r + .r { border-top: 1px solid var(--border); }
+  .D dt { color: var(--muted-foreground); }
+  .D dd { margin: 0; display: inline-flex; align-items: center; gap: 6px; text-align: right; font-weight: 500; }
+  .D .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  @container (min-width: 640px) { .D dl { grid-template-columns: 1fr 1fr; column-gap: 32px; } .D .r + .r { border-top: 0; } .D .r { border-bottom: 1px solid var(--border); } }
+
+  /* E — Compact banner */
+  .E { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--muted); }
+  .E .txt { min-width: 0; flex: 1; }
+  .E .t1 { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .E .t2 { font-size: 12px; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .E .more { display: none; }
+  @container (min-width: 640px) { .E .more { display: inline-flex; gap: 4px; align-items: center; } }
+
+  /* F — Split hero + chain tabs */
+  .F { display: flex; flex-direction: column; gap: 14px; }
+  .F .tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .F .tabs button { border: 1px solid var(--border); background: var(--background); border-radius: 999px; padding: 4px 10px 4px 4px; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-size: 12px; white-space: nowrap; }
+  .F .tabs button[aria-pressed='true'] { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+  .F .big { display: flex; flex-direction: column; gap: 2px; }
+  .F .big .amt { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .F .info { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .F .cell { background: var(--muted); border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  @container (min-width: 640px) { .F .info { grid-template-columns: repeat(3, 1fr); } .F .cell { flex-direction: column; align-items: flex-start; } }
+
+  @media (prefers-reduced-motion: no-preference) { .btn, .icon, .seg button { transition: background-color .15s, color .15s; } }
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Mockup controls">
+  <h1>My balance — card variants</h1>
+  <span class="lbl">Device</span>
+  <div class="seg" id="dev">
+    <button aria-pressed="true" data-v="all">All</button>
+    <button aria-pressed="false" data-v="390">Mobile 390</button>
+    <button aria-pressed="false" data-v="768">Tablet 768</button>
+    <button aria-pressed="false" data-v="1180">Desktop 1280</button>
+  </div>
+  <span class="lbl">Data</span>
+  <div class="seg" id="data">
+    <button aria-pressed="true" data-v="one">1 chain (ABSTER)</button>
+    <button aria-pressed="false" data-v="multi">3 chains (ETH)</button>
+  </div>
+  <span class="lbl">Theme</span>
+  <div class="seg" id="theme">
+    <button aria-pressed="true" data-v="light">Light</button>
+    <button aria-pressed="false" data-v="dark">Dark</button>
+  </div>
+</div>
+<main id="stage"></main>
+
+<script>
+const IC = {
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  wallet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>',
+};
+const DATA = {
+  one: { sym: 'ABSTER', name: 'ABSTER', color: 'oklch(0.72 0.17 160)', price: 0.00115887, share: 0.23,
+    rows: [{ chain: 'Abstract', c: 'oklch(0.55 0.12 160)', amt: 6121694.9274, addr: '0xc325b7e2736a5202bd860f5974d0aa375e57ede5' }] },
+  multi: { sym: 'ETH', name: 'Ether', color: 'oklch(0.55 0.15 270)', price: 2600, share: 0.41,
+    rows: [
+      { chain: 'Ethereum', c: 'oklch(0.55 0.15 270)', amt: 1.25, addr: null },
+      { chain: 'Base', c: 'oklch(0.55 0.2 260)', amt: 0.88, addr: null },
+      { chain: 'Abstract', c: 'oklch(0.55 0.12 160)', amt: 0.42, addr: null },
+    ] },
+};
+const st = { dev: 'all', data: 'one' };
+const usd = (v) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const amt = (v) => v.toLocaleString('en-US', { maximumFractionDigits: v < 10 ? 4 : 4 });
+const price = (v) => '$' + (v < 0.01 ? v.toPrecision(4) : v.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+const short = (a) => a.slice(0, 6) + '…' + a.slice(-4);
+const logo = (d, size, r) => `<span class="logo" style="width:${size}px;height:${size}px;background:${d.color};font-size:${size * 0.4}px" aria-hidden="true">${d.sym[0]}<span class="badge" style="background:${r.c}">${r.chain[0]}</span></span>`;
+const dot = (r) => `<span class="dot" style="background:${r.c}">${r.chain[0]}</span>`;
+const copyBtn = (a, sym) => a ? `<button class="icon" data-copy="${a}" aria-label="Copy ${sym} address" title="Copy address">${IC.copy}</button>` : '';
+const explorer = (a, cls = 'btn ghost') => !a ? '' : cls === 'icon' ? `<a class="icon" href="#" onclick="return false" aria-label="View on explorer" title="View on explorer">${IC.globe}</a>` : `<a class="${cls}" href="#" onclick="return false">${IC.globe} Explorer</a>`;
+
+const V = [
+  { id: 'A', name: 'A · Hero', desc: 'One big number (amount + ≈ USD), with chain and contract underneath. On wide screens the actions sit on the right. Best when the wallet holds one chain.',
+    html: (d) => { const r = d.rows[0]; const tot = d.rows.reduce((s, x) => s + x.amt, 0);
+      return `<div class="A"><div class="top">${logo(d, 44, r)}<div><div class="lbl">My balance</div><div class="amt num">${amt(tot)} <span class="muted" style="font-size:.55em;font-weight:500">${d.sym}</span></div><div class="usd num">≈ ${usd(tot * d.price)}</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px"><div class="meta">${d.rows.map((x) => `<span class="chip">${dot(x)}${x.chain}</span>`).join('')}${r.addr ? `<span class="chip mono" title="${r.addr}">${short(r.addr)}</span>` : '<span class="chip">Native coin</span>'}</div>
+      <div class="actions">${r.addr ? `<button class="btn" data-copy="${r.addr}">${IC.copy} Copy address</button>` : ''}${explorer(r.addr, 'btn')}</div></div></div>`; } },
+  { id: 'B', name: 'B · Stat strip', desc: 'Four stats in a row: Balance · Value · Price · Share of wallet (with a bar). Contract goes in the footer. Same visual language as the old stat-row, but scoped to this token only.',
+    html: (d) => { const tot = d.rows.reduce((s, x) => s + x.amt, 0); const r = d.rows[0];
+      return `<div class="B"><div class="grid">
+        <div><div class="k">Balance</div><div class="v num">${amt(tot)}</div><div class="s">${d.sym}</div></div>
+        <div><div class="k">Value</div><div class="v num">${usd(tot * d.price)}</div><div class="s">${d.rows.length} chain${d.rows.length > 1 ? 's' : ''}</div></div>
+        <div><div class="k">Price</div><div class="v num">${price(d.price)}</div><div class="s">per ${d.sym}</div></div>
+        <div><div class="k">Share of wallet</div><div class="v num">${Math.round(d.share * 100)}%</div><div class="bar-track" style="margin-top:8px"><div class="bar-fill" style="width:${d.share * 100}%"></div></div></div>
+      </div><div class="foot"><span style="display:inline-flex;gap:6px;align-items:center">${d.rows.map((x) => `<span class="chip">${dot(x)}${x.chain}</span>`).join('')}</span>
+      <span style="display:inline-flex;gap:2px;align-items:center">${r.addr ? `<span class="mono muted" title="${r.addr}">${short(r.addr)}</span>${copyBtn(r.addr, d.sym)}${explorer(r.addr)}` : '<span class="muted">Native coin</span>'}</span></div></div>`; } },
+  { id: 'C', name: 'C · Per-chain list', desc: 'Total on top, then one row per chain with a bar showing its share of the total. Wide screens also show the contract per row. Best for tokens spread across several chains.',
+    html: (d) => { const tot = d.rows.reduce((s, x) => s + x.amt, 0);
+      return `<div class="C"><div class="head"><span class="lbl">My balance · ${d.rows.length} chain${d.rows.length > 1 ? 's' : ''}</span><span style="text-align:right"><b class="num">${usd(tot * d.price)}</b><div class="muted num">${amt(tot)} ${d.sym}</div></span></div>
+      ${d.rows.map((x) => `<div class="row">${logo(d, 32, x)}<span><b style="font-weight:600">${x.chain}</b><div class="muted num" style="font-size:12px">${amt(x.amt)} ${d.sym}</div></span>
+      <div class="bar-track"><div class="bar-fill" style="width:${(x.amt / tot) * 100}%"></div></div>
+      <span class="contract">${x.addr ? `<span class="mono muted" title="${x.addr}">${short(x.addr)}</span>${copyBtn(x.addr, d.sym)}` : '<span class="muted" style="font-size:12px">Native</span>'}</span>
+      <span class="num val" style="text-align:right;font-weight:600">${usd(x.amt * d.price)}</span></div>`).join('')}</div>`; } },
+  { id: 'D', name: 'D · Token sheet', desc: 'Label–value list (like the detail panel): Token · Chain · Contract · Price · Balance · Value. Two columns on wide screens. Shows the most at once and reads like a reference card. Works as a page, not a dialog.',
+    html: (d) => { const r = d.rows[0]; const tot = d.rows.reduce((s, x) => s + x.amt, 0);
+      return `<div class="D"><div class="hd">${logo(d, 36, r)}<div><b style="font-size:16px">${d.sym}</b><div class="muted" style="font-size:12px">${d.name}</div></div></div><dl>
+      <div class="r"><dt>Chain</dt><dd>${d.rows.map((x) => `<span class="chip">${dot(x)}${x.chain}</span>`).join('')}</dd></div>
+      <div class="r"><dt>Contract</dt><dd>${r.addr ? `<span class="mono" title="${r.addr}">${short(r.addr)}</span>${copyBtn(r.addr, d.sym)}${explorer(r.addr, 'icon')}` : 'Native coin'}</dd></div>
+      <div class="r"><dt>Price</dt><dd class="num">${price(d.price)}</dd></div>
+      <div class="r"><dt>Balance</dt><dd class="num">${amt(tot)} ${d.sym}</dd></div>
+      <div class="r"><dt>Value</dt><dd class="num">${usd(tot * d.price)}</dd></div>
+      <div class="r"><dt>Share of wallet</dt><dd class="num">${Math.round(d.share * 100)}%</dd></div></dl></div>`; } },
+  { id: 'E', name: 'E · Compact banner', desc: 'A single slim bar (muted background): logo · amount · ≈ USD, with copy/explorer at the end. Takes the least space so the history below shows up fast. Wide screens also show the contract.',
+    html: (d) => { const r = d.rows[0]; const tot = d.rows.reduce((s, x) => s + x.amt, 0);
+      return `<div class="E">${logo(d, 36, r)}<div class="txt"><div class="t1 num">${amt(tot)} ${d.sym} <span class="muted" style="font-weight:500">≈ ${usd(tot * d.price)}</span></div><div class="t2">My balance · ${d.rows.map((x) => x.chain).join(', ')}</div></div>
+      <span class="more">${r.addr ? `<span class="mono muted" title="${r.addr}">${short(r.addr)}</span>` : ''}</span>${copyBtn(r.addr, d.sym)}${r.addr ? explorer(r.addr, 'icon') : ''}</div>`; } },
+  { id: 'F', name: 'F · Chain tabs + info tiles', desc: 'Chain pills along the top (switching updates the number and the contract), a big number in the middle, and three info tiles: Price · Contract · Share. Clear for multi-chain without stacking many rows.',
+    html: (d, sel = 0) => { const r = d.rows[sel] ?? d.rows[0];
+      return `<div class="F" data-f>${d.rows.length > 1 ? `<div class="tabs" role="group" aria-label="Chain">${d.rows.map((x, i) => `<button aria-pressed="${i === sel}" data-tab="${i}">${dot(x)}${x.chain}</button>`).join('')}</div>` : ''}
+      <div style="display:flex;gap:12px;align-items:center">${logo(d, 40, r)}<div class="big"><span class="lbl">My balance on ${r.chain}</span><span class="amt num">${amt(r.amt)} ${d.sym}</span><span class="muted num">≈ ${usd(r.amt * d.price)}</span></div></div>
+      <div class="info"><div class="cell"><span class="lbl">Price</span><b class="num">${price(d.price)}</b></div>
+      <div class="cell"><span class="lbl">Contract</span><span style="display:inline-flex;align-items:center;gap:2px">${r.addr ? `<span class="mono" title="${r.addr}">${short(r.addr)}</span>${copyBtn(r.addr, d.sym)}${explorer(r.addr, 'icon')}` : '<b>Native coin</b>'}</span></div>
+      <div class="cell"><span class="lbl">Share of wallet</span><b class="num">${Math.round(d.share * 100)}%</b></div></div></div>`; } },
+];
+
+const widths = () => (st.dev === 'all' ? [390, 768, 1180] : [Number(st.dev)]);
+const capOf = (w) => (w === 390 ? 'Mobile · 390' : w === 768 ? 'Tablet · 768' : 'Desktop · 1280');
+const tabSel = {};
+function render() {
+  const d = DATA[st.data];
+  document.getElementById('stage').innerHTML = V.map((v) => `<section class="variant" aria-labelledby="h-${v.id}"><h2 id="h-${v.id}">${v.name}</h2><p class="desc">${v.desc}</p>
+    <div class="frames">${widths().map((w) => `<div class="frame-wrap"><p class="frame-cap">${capOf(w)}</p><div class="frame" style="width:${Math.min(w, w)}px" data-v="${v.id}" data-w="${w}">
+    <div class="ctx">All wallets › Main › <b>${d.sym}</b></div>${v.html(d, tabSel[v.id + w] ?? 0)}</div></div>`).join('')}</div></section>`).join('');
+}
+function seg(id, key, fn) {
+  document.getElementById(id).addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    for (const x of e.currentTarget.children) x.setAttribute('aria-pressed', String(x === b));
+    if (key) st[key] = b.dataset.v; fn ? fn(b.dataset.v) : render();
+  });
+}
+seg('dev', 'dev'); seg('data', 'data');
+seg('theme', null, (v) => { document.documentElement.dataset.theme = v; });
+document.getElementById('stage').addEventListener('click', async (e) => {
+  const c = e.target.closest('[data-copy]');
+  if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); } catch {}
+    const old = c.innerHTML; c.classList.add('copied'); c.innerHTML = c.classList.contains('icon') ? IC.check : IC.check + ' Copied';
+    setTimeout(() => { c.classList.remove('copied'); c.innerHTML = old; }, 1200); return; }
+  const t = e.target.closest('[data-tab]');
+  if (t) { const f = t.closest('.frame'); tabSel[f.dataset.v + f.dataset.w] = Number(t.dataset.tab); render(); }
+});
+render();
+</script>
+</body>
+</html>
