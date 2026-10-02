@@ -4,8 +4,12 @@
  */
 import { useEffect, useRef, useState } from 'react';
 
-/** ความสูงของแถบบน (ตรงกับ --top-h) + 1px กันปัดเศษ */
-const TOP = 65;
+/** ขอบล่างจริงของแถบบน (มือถือมีแถวค้นหาเพิ่ม) — เขียนลง --sticky-top ให้ CSS ของ thead ใช้ */
+function topEdge(): number {
+  const h = Math.round(document.querySelector('.top')?.getBoundingClientRect().height ?? 64);
+  document.documentElement.style.setProperty('--sticky-top', `${h}px`);
+  return h;
+}
 
 export function useStickyHead() {
   const ref = useRef<HTMLTableSectionElement>(null);
@@ -14,6 +18,7 @@ export function useStickyHead() {
     const on = () => {
       const el = ref.current;
       if (!el) return;
+      const TOP = topEdge() + 1; // +1px กันปัดเศษ
       const top = el.getBoundingClientRect().top;
       const table = el.parentElement?.getBoundingClientRect();
       setStuck(top <= TOP && !!table && table.bottom > top + el.offsetHeight);

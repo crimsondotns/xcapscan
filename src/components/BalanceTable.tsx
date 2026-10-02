@@ -112,7 +112,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
         </Empty>
       ) : (
         <div className="table-wrap">
-          <Table containerClassName="lg:overflow-visible" className="tx bal">
+          <Table containerClassName="max-sm:overflow-visible lg:overflow-visible" className="tx bal">
             <TableHeader ref={head.ref} data-stuck={head.stuck}>
               <TableRow>
                 <Th k="token" label={t('tab.tokens')} filter="chain" />

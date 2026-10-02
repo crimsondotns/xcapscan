@@ -195,7 +195,7 @@ export function WalletTable({ wallets, feeds, chains, activeId, onOpen, onSwitch
         <p className="text-sm text-muted-foreground">{t('wallets.empty')}</p>
       ) : (
         <div className="table-wrap wtab-wrap">
-          <Table containerClassName="lg:overflow-visible" className="tx wtab">
+          <Table containerClassName="max-sm:overflow-visible lg:overflow-visible" className="tx wtab">
             <TableHeader ref={head.ref} data-stuck={head.stuck}>
               <TableRow>
                 <Th k="label" label={t('wallets.col.label')} />
