@@ -86,3 +86,20 @@ test('solana: pnl-positions parsed (plain or wrapped by address), zero balance d
   }
   assert.equal(balanceSource([ep({ family: 'sol', url: 'https://sol.invalid/x' })], { family: 'sol' })?.origin, 'https://sol.invalid');
 });
+
+test('price cache: an old trade does not overwrite the current SOL price; balance prices count as now', async () => {
+  const { fetchPage } = await import('../src/feed.ts');
+  const { priceOf } = await import('../src/prices.ts');
+  const { rememberBalancePrices } = await import('../src/balances.ts');
+  setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
+  const trade = { userTrades: [{ type: 'buy', assetId: 'J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr', usdVolume: 540.475, nativeVolume: 6.5, amount: 1000, price: 0.54, blockTime: '2026-01-17T09:30:45.000Z', txHash: 'h1' }] };
+  (globalThis as { fetch: unknown }).fetch = async () => fake(200, trade);
+  // trade loaded first, then the balance → the balance (now) wins
+  await fetchPage('https://src.invalid/v1/pnl-activity?address={address}', 'w', 'GZ3tQp5qH91afiepNWecsExxdeptwsM9hu1bMVD1i5Ff', null, 20, { family: 'sol' });
+  assert.equal(Math.round(priceOf('sol', null, 'SOL')!), 83);
+  rememberBalancePrices(parsePositions({ tokenPositions: [] }).concat([{ chain: 'sol', tokenId: 'So11111111111111111111111111111111111111112', symbol: 'SOL', name: 'SOL', logo: null, amount: 1.3113, price: 121.4, usd: 159.2, verified: true }]));
+  assert.equal(priceOf('sol', null, 'SOL'), 121.4);
+  // the old trade loaded again later must not push the price back to 83
+  await fetchPage('https://src.invalid/v1/pnl-activity?address={address}', 'w', 'GZ3tQp5qH91afiepNWecsExxdeptwsM9hu1bMVD1i5Ff', null, 20, { family: 'sol' });
+  assert.equal(priceOf('sol', null, 'SOL'), 121.4);
+});

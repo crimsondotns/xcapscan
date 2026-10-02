@@ -495,7 +495,9 @@ function fromTransferList(body: Dict, walletId: string, address: string): Page {
     const usd = num(item.usdVolume);
     const price = usd !== null && amount ? usd / amount : null;
     const symbol = mint ? shortId(mint) : '';
-    rememberPrice(chain, mint, symbol, price);
+    const time = Math.floor(Date.parse(str(item.blockTime) ?? '') / 1000) || (num(item.blockTime) ?? 0);
+    // ราคา ณ เวลาธุรกรรม — ส่งเวลาไปด้วย ไม่งั้นราคาเก่าถูกนับเป็นราคาล่าสุดแล้วทับราคาปัจจุบัน
+    rememberPrice(chain, mint, symbol, price, time);
     const fee = num(item.feeAmount);
     rows.push({
       key: `${walletId}:${chain}:${hash}:${rows.length}`,
@@ -504,7 +506,7 @@ function fromTransferList(body: Dict, walletId: string, address: string): Page {
       chain,
       chainLogo: null,
       nativeSymbol: 'SOL',
-      time: Math.floor(Date.parse(str(item.blockTime) ?? '') / 1000) || (num(item.blockTime) ?? 0),
+      time,
       type: out ? 'send' : 'receive',
       name: '',
       failed: false,
@@ -542,8 +544,10 @@ function fromUserTrades(wrap: Dict, walletId: string): Page {
     const sol = num(item.nativeVolume) ?? 0;
     const solPrice = sol && usd !== null ? usd / sol : null;
     const symbol = shortId(mint);
-    rememberPrice(chain, mint, symbol, price);
-    rememberPrice(chain, null, 'SOL', solPrice);
+    const time = Math.floor(Date.parse(str(item.blockTime) ?? '') / 1000) || (num(item.blockTime) ?? 0);
+    // ราคา ณ เวลาเทรด — ส่งเวลาไปด้วย ไม่งั้นราคา SOL ของเทรดเก่าทับราคาปัจจุบัน
+    rememberPrice(chain, mint, symbol, price, time);
+    rememberPrice(chain, null, 'SOL', solPrice, time);
     const token: Move = { dir: buy ? 'in' : 'out', amount, symbol, name: null, usd, price, tokenId: mint, flagged: false, logo: null };
     const native: Move = { dir: buy ? 'out' : 'in', amount: sol, symbol: 'SOL', name: null, usd, price: solPrice, tokenId: null, flagged: false, logo: null };
     rows.push({
@@ -553,7 +557,7 @@ function fromUserTrades(wrap: Dict, walletId: string): Page {
       chain,
       chainLogo: null,
       nativeSymbol: 'SOL',
-      time: Math.floor(Date.parse(str(item.blockTime) ?? '') / 1000) || (num(item.blockTime) ?? 0),
+      time,
       type: 'swap',
       name: buy ? 'buy' : 'sell',
       failed: false,

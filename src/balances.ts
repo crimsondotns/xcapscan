@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { limitedFetch } from './limiter';
 import { requestUrl } from './proxy';
 import { ensureTokenMeta } from './tokens';
+import { rememberPrice } from './prices';
 import type { Endpoint, Wallet } from './store';
 
 export interface BalanceRow {
@@ -143,6 +144,19 @@ export async function fetchBalances(ep: Endpoint, origin: string, address: strin
   return { rows, limited, at: Date.now() };
 }
 
+/**
+ * ราคาจากยอดคงเหลือ = ราคาปัจจุบัน → ส่งเข้าแคชราคา (เวลา = ตอนนี้) ให้แผงรายละเอียดใช้ราคาล่าสุดจริง
+ * เหรียญหลักของเชน (id ไม่ใช่ที่อยู่ เช่น eth/op หรือ SOL บน Solana) เก็บซ้ำแบบไม่มี tokenId ให้ตรงคีย์ที่ priceOf ค้นด้วยสัญลักษณ์
+ */
+export function rememberBalancePrices(rows: BalanceRow[]): void {
+  for (const r of rows) {
+    if (r.price === null) continue;
+    rememberPrice(r.chain, r.tokenId, r.symbol, r.price);
+    const native = !(r.tokenId.startsWith('0x') || r.tokenId.length > 20) || (r.chain === 'sol' && r.symbol.toUpperCase() === 'SOL');
+    if (native) rememberPrice(r.chain, null, r.symbol, r.price);
+  }
+}
+
 const cache = new Map<string, Balances>();
 
 export interface BalanceState {
@@ -171,6 +185,7 @@ export function useBalances(wallet: Wallet, endpoints: Endpoint[], active: boole
     fetchBalances(src.ep, src.origin, wallet.address)
       .then((b) => {
         cache.set(key, b);
+        rememberBalancePrices(b.rows);
         if (live) setData(b);
       })
       .catch(() => live && setError(true))
