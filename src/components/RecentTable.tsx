@@ -1,6 +1,8 @@
 import { useI18n } from '../i18n';
 import type { TxRow } from '../feed';
-import type { Wallet } from '../store';
+import { useStore, type Wallet } from '../store';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
 import { chainOf, type ChainMap } from '../chains';
 import { formatAmount, formatFeeNative, formatFeeUsd, formatRelative, shortAddr } from '../format';
 import { Icon } from './Icon';
@@ -21,7 +23,9 @@ const LIMIT = 10;
 export function RecentTable({ rows, wallets, chains, selected, onSelect, loading }: { rows: TxRow[]; wallets: Wallet[]; chains: ChainMap; selected: string | null; onSelect: (r: TxRow) => void; loading: boolean }) {
   const { t } = useI18n();
   const byAddr = new Map(wallets.map((w) => [w.address.toLowerCase(), w]));
-  const recent = rows.slice(0, LIMIT);
+  /* ซ่อน/แสดงรายการน่าสงสัย — ค่าเดียวกับแท็บธุรกรรม/โทเคน (settings.hideScam) */
+  const { settings, setHideScam } = useStore();
+  const recent = (settings.hideScam ? rows.filter((r) => !r.flagged) : rows).slice(0, LIMIT);
   const head = useStickyHead();
 
   const Party = ({ addr }: { addr: string | null }) => {
@@ -41,6 +45,14 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
 
   return (
     <>
+      <div className="toolbar">
+        <Field orientation="horizontal" className="w-auto">
+          <Switch id="recent-hide-scam" checked={settings.hideScam} onCheckedChange={(v) => setHideScam(v)} />
+          <FieldLabel htmlFor="recent-hide-scam" className="font-normal">
+            {t('tx.hideScam')}
+          </FieldLabel>
+        </Field>
+      </div>
       {recent.length === 0 && !loading ? (
         <p className="text-sm text-muted-foreground">{t('recent.empty')}</p>
       ) : (

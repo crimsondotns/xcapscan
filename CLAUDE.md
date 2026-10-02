@@ -108,3 +108,8 @@ Do not declare work done while any of these is red.
 - กระเป๋า Solana / ไม่มีแหล่ง ERC-20 → แท็บ Tokens ยังเป็นสรุปเข้า-ออกจากประวัติ (`TokenTable`) เหมือนเดิม
 - ตาราง Balance มีช่องค้นหา (symbol/name มีคำนี้ หรือ token address ขึ้นต้นด้วย — `matchBalance`) + dropdown เชน (แสดงเมื่อมี ≥2 เชน)
 - หน้าโทเคน (`AssetPage`, เปิดจากกระเป๋า) มีการ์ด **My balance** ต่อเชน: จำนวน · ≈ USD · contract (คัดลอก + "View on explorer" `<explorer>/token/<address>`) หรือป้ายเหรียญหลัก — เป็นหน้า ไม่ใช่ Dialog (ผู้ใช้ 2026-10-02); ใช้ `useBalances` (แคชเดียวกับแท็บ Tokens)
+- หน้าโทเคน: path พก token address (`#/wallet/<id>/token/<tokenId>`; symbol ยังเปิดได้สำหรับลิงก์เก่า) และขอประวัติจากแหล่ง ERC-20 โดยตรงด้วย `chain_id` + `token_id` ต่อท้ายแม่แบบประวัติ (`src/tokenFeed.ts`) เลื่อนโหลดต่อด้วย cursor เดิม — ไม่ไล่ประวัติทั้งกระเป๋า (ผู้ใช้ 2026-10-02)
+
+## เอาออกแล้ว (ผู้ใช้ 2026-10-02)
+- `.headline` (หัวการ์ด: ตัวเลขใหญ่/ชื่อกระเป๋า/ปุ่มโหลด/แท็ก/RangeChips), กราฟ `FlowChart` และ `.stat-row` ถูกลบออกจากทุกหน้า (Dashboard / WalletPage / AssetPage) — ห้ามใส่กลับเอง
+- ธุรกรรมล่าสุดมีสวิตช์ Hide suspicious (ค่าเดียวกับ `settings.hideScam`)

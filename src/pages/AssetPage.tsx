@@ -11,7 +11,7 @@ import { lastTime, netUsd, rowsOfToken, signClassOf, tokenSummary, totals, withi
 import { formatAmount, formatPrice, formatRelative, formatUsdExact, shortAddr } from '../format';
 import { useI18n } from '../i18n';
 import { useCopy } from '../copy';
-import { FlowChart, RangeChips, Stat, type Range } from '../components/FlowChart';
+import type { Range } from '../components/FlowChart';
 import { useGroupLabel } from '../components/GroupNav';
 import { PageTabs } from '../components/PageTabs';
 import { TxTable } from '../components/TxTable';
@@ -28,28 +28,46 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { CopyIcon } from 'lucide-react';
 import { useBalances } from '../balances';
+import { useTokenHistory } from '../tokenFeed';
 import { useStore } from '../store';
 
 /** หน้าโทเคนแบบทุกกระเป๋า — ไม่มีกระเป๋าให้ดูยอด (ตระกูล sol = ไม่ยิงคำขอ) */
 const NO_WALLET = { id: '', label: '', address: '', family: 'sol', enabled: true } as unknown as Wallet;
 
-export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onRange, onBack, onBackWallet, onWallet, onScopeAll, selected, onSelect, loading }: { symbol: string; wallet: Wallet | null; all: Wallet[]; rows: TxRow[]; chains: ChainMap; group: GroupId; range: Range; onRange: (r: Range) => void; onBack: () => void; onBackWallet: () => void; onWallet: (id: string) => void; onScopeAll: () => void; selected: string | null; onSelect: (r: TxRow) => void; loading: boolean }) {
+export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, onRange, onBack, onBackWallet, onWallet, onScopeAll, selected, onSelect, loading }: { tokenKey: string; wallet: Wallet | null; all: Wallet[]; rows: TxRow[]; chains: ChainMap; group: GroupId; range: Range; onRange: (r: Range) => void; onBack: () => void; onBackWallet: () => void; onWallet: (id: string) => void; onScopeAll: () => void; selected: string | null; onSelect: (r: TxRow) => void; loading: boolean }) {
   const { t } = useI18n();
   const copy = useCopy();
   const [tab, setTab] = useState<'history' | 'holders'>('history');
   const holdersHead = useStickyHead();
   const groupLabel = useGroupLabel(all, group);
-  const list = useMemo(() => rowsOfToken(rows, symbol), [rows, symbol]);
-  const ranged = useMemo(() => withinDays(list, range), [list, range]);
-  const token = useMemo(() => tokenSummary(ranged).find((k) => k.symbol === symbol) ?? tokenSummary(list).find((k) => k.symbol === symbol) ?? null, [ranged, list, symbol]);
-  const sums = useMemo(() => totals(ranged), [ranged]);
-  const pending = loading && rows.length === 0;
-  /* ยอดคงเหลือของกระเป๋านี้สำหรับโทเคนนี้ (อาจหลายเชน) — ได้จากแคชถ้าเคยเปิดแท็บ Tokens; ไม่มีกระเป๋า = ไม่ยิง */
   const { settings } = useStore();
+  /* ยอดคงเหลือของกระเป๋านี้ — ได้จากแคชถ้าเคยเปิดแท็บ Tokens; ไม่มีกระเป๋า = ไม่ยิง */
   const bal = useBalances(wallet ?? NO_WALLET, settings.endpoints, !!wallet);
-  const mine = useMemo(() => (wallet && bal.data ? bal.data.rows.filter((r) => r.symbol === symbol) : []), [wallet, bal.data, symbol]);
+  /* path พก token address (ผู้ใช้ 2026-10-02) หรือ symbol (ลิงก์เก่า/จากชื่อในตาราง) — หา symbol + เชนจากยอด แล้วจากประวัติ */
+  const k = tokenKey.toLowerCase();
+  const balHit = bal.data?.rows.find((r) => r.tokenId.toLowerCase() === k) ?? null;
+  const histHit = useMemo(() => {
+    for (const r of rows) for (const m of r.moves) if (m.tokenId && m.tokenId.toLowerCase() === k) return { chain: r.chain, symbol: m.symbol };
+    return null;
+  }, [rows, k]);
+  const byId = !!(balHit || histHit);
+  const symbol = balHit?.symbol ?? histHit?.symbol ?? tokenKey;
+  const tokenChain = balHit?.chain ?? histHit?.chain ?? null;
+  /* ประวัติของโทเคนนี้จากแหล่งโดยตรง (chain_id + token_id) — เร็วกว่าไล่ทั้งกระเป๋า; ไม่ได้ก็กรองจากที่โหลดไว้ */
+  const th = useTokenHistory(wallet, settings.endpoints, tokenChain, byId ? tokenKey : null, settings.pageSize);
+  const local = useMemo(() => (byId ? rows.filter((r) => r.moves.some((m) => m.amount !== 0 && m.tokenId?.toLowerCase() === k)) : rowsOfToken(rows, symbol)), [rows, byId, k, symbol]);
+  const list = useMemo(() => {
+    if (!th.supported) return local;
+    const seen = new Set(th.rows.map((r) => r.key));
+    return [...th.rows, ...local.filter((r) => !seen.has(r.key))].sort((a, b) => b.time - a.time);
+  }, [th.supported, th.rows, local]);
+  const ranged = useMemo(() => withinDays(list, range), [list, range]);
+  const token = useMemo(() => tokenSummary(ranged).find((x) => x.symbol === symbol) ?? tokenSummary(list).find((x) => x.symbol === symbol) ?? null, [ranged, list, symbol]);
+  const sums = useMemo(() => totals(ranged), [ranged]);
+  const pending = (th.supported ? th.loading : loading) && list.length === 0;
+  const mine = useMemo(() => (wallet && bal.data ? bal.data.rows.filter((r) => (byId ? r.tokenId.toLowerCase() === k : r.symbol === symbol)) : []), [wallet, bal.data, byId, k, symbol]);
   const top = mine[0] ?? null;
-  const chain = chainOf(chains, token?.chain ?? top?.chain ?? '') ?? undefined;
+  const chain = chainOf(chains, token?.chain ?? top?.chain ?? tokenChain ?? '') ?? undefined;
   const price = top?.price ?? (token ? priceOf(token.chain, token.tokenId, token.symbol) : null);
   const holders = useMemo(() => {
     const ids = [...new Set(ranged.map((r) => r.walletId))];
@@ -81,38 +99,6 @@ export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onR
         </BreadcrumbList>
       </Breadcrumb>
       <section className="panel">
-        <div className="headline">
-          <span className="who">
-            <TokenLogo token={token?.logo ?? top?.logo ?? null} tokenName={symbol} chain={chain?.logo ?? null} chainName={chain?.name ?? token?.chain ?? top?.chain ?? ''} size={44} />
-            <span className="act-text">
-              {token?.tokenId ? (
-                <button type="button" className="act-title head-name copy-name" title={t('token.copyAddress', { sym: symbol })} aria-label={t('token.copyAddress', { sym: symbol })} onClick={() => copy(token.tokenId ?? '')}>
-                  {symbol}
-                </button>
-              ) : (
-                <span className="act-title head-name" title={t('token.native')}>
-                  {symbol}
-                </span>
-              )}
-              <span className="act-sub">
-                {token?.flagged && (
-                  <span className="flag" title={t('tx.scam')}>
-                    <Icon name="alert" width={12} height={12} style={{ verticalAlign: '-1px' }} />
-                  </span>
-                )}
-                {[token?.name ?? top?.name ?? null, chain?.name ?? token?.chain ?? top?.chain ?? null, price === null ? null : t('token.perUnit', { price: formatPrice(price) })].filter(Boolean).join(' · ')}
-              </span>
-            </span>
-          </span>
-          <span className="top-spacer" />
-          {wallet && (
-            <ToggleGroup variant="outline" size="sm" value={['wallet']} onValueChange={(v: string[]) => v[0] === 'all' && onScopeAll()} aria-label={t('token.scopeLabel')}>
-              <ToggleGroupItem value="wallet">{t('token.scopeWallet', { label: wallet.label })}</ToggleGroupItem>
-              <ToggleGroupItem value="all">{t('token.scopeAll')}</ToggleGroupItem>
-            </ToggleGroup>
-          )}
-          <RangeChips value={range} onChange={onRange} />
-        </div>
         {wallet && bal.supported && (mine.length > 0 || bal.loading) && (
           <section aria-labelledby="mine-h" className="flex flex-col gap-2">
             <h2 id="mine-h" className="text-sm text-muted-foreground">
@@ -172,13 +158,6 @@ export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onR
             )}
           </section>
         )}
-        <div className="stat-row">
-          <Stat label={t('token.received')} value={`${formatAmount(token?.inAmount ?? 0)} ${symbol}`} tone="is-pos" sub={formatUsdExact(token?.inUsd ?? 0)} loading={pending} />
-          <Stat label={t('token.sent')} value={`${formatAmount(token?.outAmount ?? 0)} ${symbol}`} tone="is-neg" sub={formatUsdExact(token?.outUsd ?? 0)} loading={pending} />
-          <Stat label={t('token.net')} value={formatUsdExact((token?.inUsd ?? 0) - (token?.outUsd ?? 0))} tone={signClassOf((token?.inUsd ?? 0) - (token?.outUsd ?? 0))} sub={`${formatAmount((token?.inAmount ?? 0) - (token?.outAmount ?? 0))} ${symbol}`} loading={pending} />
-          <Stat label={t('token.holders')} value={String(holders.length)} sub={t('flow.net', { n: range, tx: sums.count })} loading={pending} />
-        </div>
-        <FlowChart rows={ranged} days={range} height={200} loading={pending} />
         <PageTabs
           value={tab}
           onChange={setTab}
@@ -188,7 +167,7 @@ export function AssetPage({ symbol, wallet, all, rows, chains, group, range, onR
           ]}
         />
         {tab === 'history' ? (
-          <TxTable rows={list} wallets={all} chains={chains} wallet={wallet?.id ?? ''} onWallet={(id) => (id ? onWallet(id) : onScopeAll())} selected={selected} onSelect={onSelect} loading={loading} />
+          <TxTable rows={list} wallets={all} chains={chains} wallet={wallet?.id ?? ''} onWallet={(id) => (id ? onWallet(id) : onScopeAll())} selected={selected} onSelect={onSelect} loading={th.supported ? th.loading : loading} hasMore={th.hasMore} onMore={th.supported ? th.more : undefined} />
         ) : (
           <div className="table-wrap">
             <Table containerClassName="lg:overflow-visible" className="tx">

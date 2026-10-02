@@ -11,7 +11,7 @@ import type { WalletInfo, GroupId } from '../groups';
 import { signClassOf, totals, withinDays } from '../flow';
 import { formatUsdExact } from '../format';
 import { useI18n } from '../i18n';
-import { FlowChart, RangeChips, Stat, type Range } from '../components/FlowChart';
+import type { Range } from '../components/FlowChart';
 import { GroupRail, useGroupLabel } from '../components/GroupNav';
 import { PageTabs } from '../components/PageTabs';
 import { WalletTable } from '../components/WalletTable';
@@ -34,49 +34,7 @@ export function Dashboard({ all, wallets, rows, feeds, chains, group, onGroup, i
   return (
     <div className="cols">
       <GroupRail wallets={all} infoOf={infoOf} group={group} onChange={onGroup} chains={chains} />
-      <section className="panel" aria-labelledby="group-h">
-        <div className="headline">
-          <span className="head-sum">
-            <span className="text-sm text-muted-foreground" id="group-h">
-              {t('group.summary', { group: label, n: wallets.length, loaded: loadedCount })}
-            </span>
-            <div className="big-row">
-              {pending ? <SkeletonBar width={200} height={30} /> : <div className={`big ${signClassOf(sums.net)}`}>{formatUsdExact(sums.net)}</div>}
-              {progress.running ? (
-                <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-                  {t('recent.cancel')}
-                </Button>
-              ) : (
-                <Button type="button" variant="ghost" size="icon" onClick={onLoadGroup} disabled={loading} aria-label={t('group.load')} title={t('group.load')}>
-                  <Icon name="refresh" />
-                </Button>
-              )}
-              <span className="text-sm text-muted-foreground" aria-live="polite">
-                {progress.running ? (
-                  <>
-                    <Spinner className="inline" /> {t('recent.progress', { done: progress.done, total: progress.total })}
-                  </>
-                ) : progress.stopped === 'rate' ? (
-                  <span className="text-sm text-destructive">{progress.retryIn > 0 ? t('recent.rateLimitedIn', { n: progress.retryIn }) : t('recent.rateLimited')}</span>
-                ) : progress.stopped === 'cancel' ? (
-                  t('recent.cancelled')
-                ) : (
-                  ''
-                )}
-              </span>
-            </div>
-            <span className="text-sm text-muted-foreground">{t('flow.net', { n: range, tx: sums.count })}</span>
-          </span>
-          <span className="top-spacer" />
-          <RangeChips value={range} onChange={onRange} />
-        </div>
-        <FlowChart rows={ranged} days={range} height={240} loading={pending} />
-        <div className="stat-row">
-          <Stat label={t('flow.in')} value={formatUsdExact(sums.inUsd)} tone="is-pos" loading={pending} />
-          <Stat label={t('flow.out')} value={formatUsdExact(sums.outUsd)} tone="is-neg" loading={pending} />
-          <Stat label={t('flow.fee')} value={formatUsdExact(sums.fee)} loading={pending} />
-          <Stat label={t('flow.flagged')} value={String(sums.flagged)} loading={pending} />
-        </div>
+      <section className="panel" aria-label={label}>
         <PageTabs
           value={tab}
           onChange={setTab}

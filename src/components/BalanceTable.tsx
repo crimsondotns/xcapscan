@@ -23,7 +23,7 @@ import { Logo } from './Logo';
 
 type SortKey = 'token' | 'amount' | 'price' | 'value';
 
-export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chains: ChainMap; onToken: (symbol: string) => void }) {
+export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chains: ChainMap; onToken: (tokenKey: string) => void }) {
   const { t } = useI18n();
   const { settings, setHideScam } = useStore();
   const hideScam = settings.hideScam;
@@ -131,11 +131,11 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
                     key={`${r.chain}:${r.tokenId}`}
                     className="tx-row"
                     tabIndex={0}
-                    onClick={() => onToken(r.symbol)}
+                    onClick={() => onToken(r.tokenId)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        onToken(r.symbol);
+                        onToken(r.tokenId);
                       }
                     }}
                   >

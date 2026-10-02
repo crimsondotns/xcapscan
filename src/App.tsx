@@ -271,7 +271,7 @@ export function App() {
             <div className="stack-lg">
               {errorList}
               <AssetPage
-                symbol={pageToken}
+                tokenKey={pageToken}
                 wallet={activeWalletObj}
                 all={wallets}
                 rows={pageWallet ? walletRows : groupRows}

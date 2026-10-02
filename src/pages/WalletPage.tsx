@@ -10,7 +10,7 @@ import type { GroupId } from '../groups';
 import { signClassOf, tokenSummary, totals, withinDays } from '../flow';
 import { formatUsdExact, shortAddr } from '../format';
 import { useI18n } from '../i18n';
-import { FlowChart, RangeChips, Stat, type Range } from '../components/FlowChart';
+import type { Range } from '../components/FlowChart';
 import { useGroupLabel } from '../components/GroupNav';
 import { PageTabs } from '../components/PageTabs';
 import { TokenTable } from '../components/TokenTable';
@@ -87,39 +87,6 @@ export function WalletPage({
         </BreadcrumbList>
       </Breadcrumb>
       <section className="panel">
-        <div className="headline">
-          <span className="who">
-            <Identicon value={wallet.address} size={40} />
-            <span className="act-text">
-              <span className="act-title head-name">{wallet.label}</span>
-              <span className="act-sub sub-row">
-                <span className="mono">
-                  {shortAddr(wallet.address)} · {t(`family.${wallet.family}`)}
-                </span>
-                <Button type="button" variant="ghost" size="icon-xs" disabled={loading} onClick={onReload} aria-label={t('tx.reload')} title={t('tx.reload')}>
-                  <Icon name="refresh" />
-                </Button>
-              </span>
-            </span>
-          </span>
-          <span className="top-spacer" />
-          <Button type="button" variant="outline" onClick={() => setTagsOpen(true)}>
-            <Icon name="tag" />
-            {tags.length === 0 ? t('tags.edit') : tags.length > 2 ? `${tags.slice(0, 2).join(' · ')} +${tags.length - 2}` : tags.join(' · ')}
-          </Button>
-          <RangeChips value={range} onChange={onRange} />
-        </div>
-        <div className="stat-row">
-          <Stat label={t('flow.netShort', { n: range })} value={formatUsdExact(sums.net)} tone={signClassOf(sums.net)} loading={pending} />
-          <Stat label={t('wallets.col.tx')} value={String(sums.count)} loading={pending} />
-          <Stat label={t('flow.feeTotal')} value={formatUsdExact(sums.fee)} loading={pending} />
-          {bal.supported ? (
-            <Stat label={t('bal.total')} value={balTotal !== null ? formatUsdExact(balTotal) : '—'} loading={bal.loading && !bal.data} />
-          ) : (
-            <Stat label={t('token.active')} value={String(tokens.length)} loading={pending} />
-          )}
-        </div>
-        <FlowChart rows={ranged} days={range} height={200} loading={pending} />
         <PageTabs
           value={tab}
           onChange={setTab}
