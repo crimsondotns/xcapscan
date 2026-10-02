@@ -141,3 +141,22 @@ th.num > [data-slot='button'] {
 [data-slot='dialog-content'] * {
   overscroll-behavior: contain;
 }
+
+/* หัวตาราง (ผู้ใช้ 2026-10-02): ไม่มีเส้นใต้/เงา และสูงพอดีตัวอักษร */
+[data-slot='table-header'] tr {
+  border-bottom: 0;
+}
+.tx th,
+[data-slot='table-head'] {
+  height: auto;
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+}
+.tx thead[data-stuck='true'] th {
+  box-shadow: none;
+}
+.tx th > [data-slot='button'] {
+  height: auto;
+  padding-top: 0;
+  padding-bottom: 0;
+}
