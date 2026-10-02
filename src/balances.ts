@@ -205,7 +205,7 @@ export const isTokenAddress = (id: string): boolean => /^0x[0-9a-f]{40}$/i.test(
 /**
  * ลิงก์ explorer ไปที่กระเป๋าของลูกค้า กรองเฉพาะโทเคนนั้น (ผู้ใช้ 2026-10-02) — host มาจาก chain list เท่านั้น
  *   EVM: <explorer>/token/<token>?a=<wallet>   · เหรียญหลัก: <explorer>/address/<wallet>
- *   Solana: <explorer>/account/<wallet>?token_address=<mint>#transfers
+ *   Solana: <explorer>/account/<wallet>?exclude_amount_zero=true&page_size=100&remove_spam=true&token_address=<mint>#balanceChanges (ผู้ใช้ 2026-10-02)
  */
 export function walletTokenUrl(explorer: string | null | undefined, family: 'erc20' | 'sol', wallet: string, tokenId: string): string | null {
   const host = explorer?.replace(/\/+$/, '');
@@ -213,5 +213,5 @@ export function walletTokenUrl(explorer: string | null | undefined, family: 'erc
   const w = encodeURIComponent(wallet);
   if (!isTokenAddress(tokenId)) return family === 'sol' ? `${host}/account/${w}` : `${host}/address/${w}`;
   const tk = encodeURIComponent(tokenId);
-  return family === 'sol' ? `${host}/account/${w}?token_address=${tk}#transfers` : `${host}/token/${tk}?a=${w}`;
+  return family === 'sol' ? `${host}/account/${w}?exclude_amount_zero=true&page_size=100&remove_spam=true&token_address=${tk}#balanceChanges` : `${host}/token/${tk}?a=${w}`;
 }
