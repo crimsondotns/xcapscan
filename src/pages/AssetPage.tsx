@@ -15,7 +15,7 @@ import type { Range } from '../components/FlowChart';
 import { useGroupLabel } from '../components/GroupNav';
 import { TxTable } from '../components/TxTable';
 import { TokenLogo } from '../components/Logo';
-import { SkeletonRows } from '../components/Skeleton';
+import { SkeletonBar, SkeletonRows } from '../components/Skeleton';
 import { Icon } from '../components/Icon';
 import { chainOf } from '../chains';
 import { priceOf } from '../prices';
@@ -45,6 +45,8 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
   }, [rows, k]);
   const byId = !!(balHit || histHit);
   const symbol = balHit?.symbol ?? histHit?.symbol ?? tokenKey;
+  /* ชื่อบน breadcrumb: ห้ามโชว์ token address แทนชื่อ (ผู้ใช้ 2026-10-02) — กำลังโหลด = Skeleton, หาไม่เจอ = "Unknown token" */
+  const named = balHit?.symbol ?? histHit?.symbol ?? (isTokenAddress(tokenKey) ? null : tokenKey);
   const tokenChain = balHit?.chain ?? histHit?.chain ?? null;
   /* ประวัติของโทเคนนี้จากแหล่งโดยตรง (chain_id + token_id) — เร็วกว่าไล่ทั้งกระเป๋า; ไม่ได้ก็กรองจากที่โหลดไว้ */
   const th = useTokenHistory(wallet, settings.endpoints, tokenChain, byId ? tokenKey : null, settings.pageSize);
@@ -84,7 +86,7 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
             </>
           )}
           <BreadcrumbItem>
-            <BreadcrumbPage>{symbol}</BreadcrumbPage>
+            <BreadcrumbPage>{named ?? (bal.loading || th.loading || loading ? <SkeletonBar width={64} /> : t('token.unknown'))}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
