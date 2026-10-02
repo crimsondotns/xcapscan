@@ -3,7 +3,7 @@
  * (เหมือน chains.ts ที่ใช้ <origin>/v1/chain/list)
  *   1) <origin>/v1/user/used_chain_list?id={address}            → เชนที่กระเป๋านี้ใช้
  *   2) <origin>/v1/user/token_list?id={address}&is_all=true&chain_id={chain}  ต่อเชน → โทเคน + amount + price
- * กระเป๋า Solana (ผู้ใช้ 2026-10-02): origin ของแหล่ง Solana ตัวแรก → <origin>/v1/pnl-positions?address={address}
+ * กระเป๋า Solana (ผู้ใช้ 2026-10-02): origin ของแหล่ง Solana ตัวแรก → <origin>/v1/pnl-positions?address={address}&filter=recentlyActive
  *   → tokenPositions[] (balance, balanceValue) ชื่อ/สัญลักษณ์/โลโก้เติมจาก metaUrl ของแหล่ง (tokens.ts)
  * ทุกคำขอผ่าน limitedFetch; เจอ 429 หยุดทันที คืนเท่าที่ได้ (limited) — limiter พักคิวให้แล้ว
  * แคชในหน่วยความจำต่อกระเป๋า (ยอดเปลี่ยนบ่อย ไม่เขียน localStorage)
@@ -105,7 +105,7 @@ export function parsePositions(j: unknown): BalanceRow[] {
 }
 
 async function fetchSolBalances(ep: Endpoint, origin: string, address: string, headers: Record<string, string>): Promise<Balances> {
-  const res = await limitedFetch(requestUrl(`${origin}/v1/pnl-positions?address=${encodeURIComponent(address)}`), { headers });
+  const res = await limitedFetch(requestUrl(`${origin}/v1/pnl-positions?address=${encodeURIComponent(address)}&filter=recentlyActive`), { headers });
   if (res.status === 429) return { rows: [], limited: true, at: Date.now() };
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   let rows = parsePositions(await res.json());
