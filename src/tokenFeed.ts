@@ -2,9 +2,11 @@
  * ประวัติของโทเคนตัวเดียวในกระเป๋าเดียว (ผู้ใช้ 2026-10-02) — ขอจากแหล่ง ERC-20 โดยตรงพร้อมตัวกรอง
  * `chain_id` + `token_id` ต่อท้ายแม่แบบประวัติเดิม แทนการไล่โหลดประวัติทั้งกระเป๋าแล้วกรองในเครื่อง
  * (ได้เฉพาะแถวของโทเคนนั้น หน้าแรกเห็นทันที) — เลื่อนหน้าด้วย cursor เดิมของ fetchPage
+ * กระเป๋า Solana: <origin ของแหล่ง Solana ตัวแรก>/v1/pnl-activity?address={address}&assetId={mint}
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FeedError, fetchPage, toTemplate, type Cursor } from './feed';
+import { FeedError, applyTokenMeta, fetchPage, toTemplate, unknownTokens, type Cursor } from './feed';
+import { ensureTokenMeta } from './tokens';
 import type { TxRow } from './feed';
 import type { Endpoint, Wallet } from './store';
 
@@ -21,6 +23,15 @@ export function tokenTemplate(url: string, chain: string, tokenId: string): stri
   return t;
 }
 
+/** แม่แบบประวัติโทเคนของ Solana จาก origin ของแหล่ง */
+export function solTokenTemplate(url: string, mint: string): string | null {
+  try {
+    return `${new URL(url).origin}/v1/pnl-activity?address={address}&assetId=${encodeURIComponent(mint)}`;
+  } catch {
+    return null;
+  }
+}
+
 export interface TokenHistory {
   supported: boolean;
   rows: TxRow[];
@@ -31,8 +42,10 @@ export interface TokenHistory {
 }
 
 export function useTokenHistory(wallet: Wallet | null, endpoints: Endpoint[], chain: string | null, tokenId: string | null, pageSize: number): TokenHistory {
-  const ep = wallet?.family === 'erc20' ? endpoints.find((e) => e.enabled && e.family === 'erc20') : undefined;
-  const supported = !!(wallet && ep && chain && tokenId);
+  const family = wallet?.family;
+  const ep = family ? endpoints.find((e) => e.enabled && e.family === family) : undefined;
+  const tpl = !ep || !tokenId ? null : family === 'sol' ? solTokenTemplate(ep.url, tokenId) : chain ? tokenTemplate(ep.url, chain, tokenId) : null;
+  const supported = !!(wallet && ep && tpl);
   const key = supported ? `${ep!.id}|${wallet!.address}|${chain}|${tokenId}` : '';
   const [rows, setRows] = useState<TxRow[]>([]);
   const [next, setNext] = useState<Cursor | null>(null);
@@ -49,7 +62,9 @@ export function useTokenHistory(wallet: Wallet | null, endpoints: Endpoint[], ch
       setLoading(true);
       const k = key;
       try {
-        const page = await fetchPage(tokenTemplate(ep!.url, chain!, tokenId!), wallet!.id, wallet!.address, cur, pageSize, { family: 'erc20', authHeader: ep!.authHeader, apiKey: ep!.apiKey });
+        const raw = await fetchPage(tpl!, wallet!.id, wallet!.address, cur, pageSize, { family: family!, authHeader: ep!.authHeader, apiKey: ep!.apiKey });
+        const ids = ep!.metaUrl ? unknownTokens(raw.rows) : [];
+        const page = ids.length ? { ...raw, rows: applyTokenMeta(raw.rows, await ensureTokenMeta(ep!, ids)) } : raw;
         if (live.current !== k) return;
         setRows((r) => {
           const seen = new Set(r.map((x) => x.key));

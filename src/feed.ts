@@ -209,7 +209,7 @@ const httpUrl = (v: unknown): string | null => (typeof v === 'string' && /^https
 function normalize(body: unknown, walletId: string, address: string): Page {
   if (isObj(body) && Array.isArray(body.history_list)) return fromHistoryList(body, walletId, address);
   if (isObj(body) && Array.isArray(body.transfers)) return fromTransferList(body, walletId, address);
-  const pnl = isObj(body) ? (Object.values(body).find((v) => isObj(v) && Array.isArray(v.userTrades)) as Dict | undefined) : undefined;
+  const pnl = isObj(body) ? (Array.isArray(body.userTrades) ? body : Object.values(body).find((v) => isObj(v) && Array.isArray(v.userTrades)) as Dict | undefined) : undefined;
   if (pnl) return fromUserTrades(pnl, walletId);
   const list = Array.isArray(body) ? body : isObj(body) ? (['result', 'data', 'activities', 'items', 'transactions', 'txs'].map((k) => body[k]).find(Array.isArray) ?? (isObj(body.data) ? ['activities', 'items', 'list'].map((k) => (body.data as Dict)[k]).find(Array.isArray) : null) ?? null) : null;
   if (!list) throw new FeedError('shape');

@@ -60,7 +60,7 @@ export function WalletPage({
   const sums = useMemo(() => totals(ranged), [ranged]);
   const tokens = useMemo(() => tokenSummary(ranged), [ranged]);
   const pending = loading && rows.length === 0;
-  /* ยอดคงเหลือจริง (แหล่ง ERC-20) — โหลดเมื่อเปิดแท็บ Tokens; กระเป๋า Solana ใช้สรุปเข้า-ออกเดิม */
+  /* ยอดคงเหลือจริง (แหล่งตระกูลเดียวกับกระเป๋า) — โหลดเมื่อเปิดแท็บ Tokens; ไม่มีแหล่ง = สรุปเข้า-ออกเดิม */
   const { settings } = useStore();
   const bal = useBalances(wallet, settings.endpoints, tab === 'tokens');
   const balTotal = bal.data?.rows.reduce((s, r) => s + (r.usd ?? 0), 0) ?? null;

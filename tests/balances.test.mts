@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { balanceSource, fetchBalances, matchBalance, parseChainIds, parseTokenList } from '../src/balances.ts';
+import { balanceSource, fetchBalances, matchBalance, parseChainIds, parsePositions, parseTokenList } from '../src/balances.ts';
 import { setLimiterTiming } from '../src/limiter.ts';
 import type { Endpoint } from '../src/store.ts';
 
@@ -32,10 +32,10 @@ test('chain ids: unique, skips junk', () => {
   assert.deepEqual(parseChainIds({ data: [{ id: 'base' }] }), ['base']);
 });
 
-test('source: first enabled ERC-20 endpoint origin; Solana wallets and Solana sources never used', () => {
+test('source: first enabled endpoint of the wallet family', () => {
   const list = [ep({ id: 's', family: 'sol', url: 'https://sol.invalid/x' }), ep({ id: 'off', enabled: false, url: 'https://off.invalid/x' }), ep({ id: 'a' }), ep({ id: 'b', url: 'https://b.invalid/x' })];
   assert.equal(balanceSource(list, { family: 'erc20' })?.origin, 'https://src.invalid');
-  assert.equal(balanceSource(list, { family: 'sol' }), null);
+  assert.equal(balanceSource(list, { family: 'sol' })?.origin, 'https://sol.invalid');
   assert.equal(balanceSource([ep({ family: 'sol' })], { family: 'erc20' }), null);
 });
 
@@ -70,4 +70,19 @@ test('filter: symbol/name contains, token address prefix, chain', () => {
   assert.equal(matchBalance(eth, ''), true);
   assert.equal(matchBalance(eth, '', 'eth'), false);
   assert.equal(matchBalance(eth, 'eth', 'op'), true);
+});
+
+test('solana: pnl-positions parsed (plain or wrapped by address), zero balance dropped, price = value ÷ amount', () => {
+  const pos = [
+    { assetId: 'J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr', balance: 4986.85169601, balanceValue: 2231.7988273156934 },
+    { assetId: 'Zero111111111111111111111111111111111111111', balance: 0, balanceValue: 0 },
+  ];
+  for (const body of [{ tokenPositions: pos }, { addr: { tokenPositions: pos } }]) {
+    const rows = parsePositions(body);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.chain, 'sol');
+    assert.equal(rows[0]!.usd, 2231.7988273156934);
+    assert.ok(Math.abs(rows[0]!.price! - 0.44753) < 1e-4);
+  }
+  assert.equal(balanceSource([ep({ family: 'sol', url: 'https://sol.invalid/x' })], { family: 'sol' })?.origin, 'https://sol.invalid');
 });

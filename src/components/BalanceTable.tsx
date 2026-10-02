@@ -1,4 +1,4 @@
-/** ยอดคงเหลือรายโทเคนของกระเป๋า (แท็บ Tokens เมื่อมีแหล่ง ERC-20) — คลิกแถวเพื่อไปหน้าโทเคนนั้น */
+/** ยอดคงเหลือรายโทเคนของกระเป๋า (แท็บ Tokens เมื่อมีแหล่งตระกูลเดียวกับกระเป๋า) — คลิกแถวเพื่อไปหน้าโทเคนนั้น */
 import { useMemo, useState } from 'react';
 import { matchBalance, type BalanceState, type BalanceRow } from '../balances';
 import { formatAmount, formatPrice, formatUsdExact } from '../format';

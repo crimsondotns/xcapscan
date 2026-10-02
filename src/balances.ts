@@ -3,12 +3,15 @@
  * (เหมือน chains.ts ที่ใช้ <origin>/v1/chain/list)
  *   1) <origin>/v1/user/used_chain_list?id={address}            → เชนที่กระเป๋านี้ใช้
  *   2) <origin>/v1/user/token_list?id={address}&is_all=true&chain_id={chain}  ต่อเชน → โทเคน + amount + price
+ * กระเป๋า Solana (ผู้ใช้ 2026-10-02): origin ของแหล่ง Solana ตัวแรก → <origin>/v1/pnl-positions?address={address}
+ *   → tokenPositions[] (balance, balanceValue) ชื่อ/สัญลักษณ์/โลโก้เติมจาก metaUrl ของแหล่ง (tokens.ts)
  * ทุกคำขอผ่าน limitedFetch; เจอ 429 หยุดทันที คืนเท่าที่ได้ (limited) — limiter พักคิวให้แล้ว
  * แคชในหน่วยความจำต่อกระเป๋า (ยอดเปลี่ยนบ่อย ไม่เขียน localStorage)
  */
 import { useCallback, useEffect, useState } from 'react';
 import { limitedFetch } from './limiter';
 import { requestUrl } from './proxy';
+import { ensureTokenMeta } from './tokens';
 import type { Endpoint, Wallet } from './store';
 
 export interface BalanceRow {
@@ -35,11 +38,10 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
 const listOf = (j: unknown): unknown[] => (Array.isArray(j) ? j : isObj(j) && Array.isArray(j.data) ? j.data : []);
 
-/** แหล่ง ERC-20 ตัวแรกที่เปิดอยู่ (ตามลำดับความสำคัญ) — กระเป๋า Solana / ไม่มีแหล่ง = null */
+/** แหล่งตระกูลเดียวกับกระเป๋าตัวแรกที่เปิดอยู่ (ตามลำดับความสำคัญ) — ไม่มีแหล่ง = null */
 export function balanceSource(endpoints: Endpoint[], wallet: Pick<Wallet, 'family'>): { ep: Endpoint; origin: string } | null {
-  if (wallet.family !== 'erc20') return null;
   for (const ep of endpoints) {
-    if (!ep.enabled || ep.family !== 'erc20') continue;
+    if (!ep.enabled || ep.family !== wallet.family) continue;
     try {
       return { ep, origin: new URL(ep.url).origin };
     } catch {
@@ -86,9 +88,40 @@ export function matchBalance(r: BalanceRow, q: string, chain = ''): boolean {
   return r.symbol.toLowerCase().includes(s) || r.name.toLowerCase().includes(s) || r.tokenId.toLowerCase().startsWith(s);
 }
 
+/** pnl-positions: { tokenPositions[] } หรือห่อด้วยที่อยู่ { "<address>": { tokenPositions[] } } — ยอด 0 ทิ้ง, ราคา = มูลค่า ÷ จำนวน */
+export function parsePositions(j: unknown): BalanceRow[] {
+  const wrap = isObj(j) ? (Array.isArray(j.tokenPositions) ? j : Object.values(j).find((v) => isObj(v) && Array.isArray(v.tokenPositions))) : undefined;
+  const out: BalanceRow[] = [];
+  for (const p of isObj(wrap) ? (wrap.tokenPositions as unknown[]) : []) {
+    if (!isObj(p)) continue;
+    const amount = num(p.balance);
+    const id = str(p.assetId);
+    if (!amount || !id) continue;
+    const usd = num(p.balanceValue);
+    const short = id.length > 10 ? `${id.slice(0, 6)}…` : id;
+    out.push({ chain: 'sol', tokenId: id, symbol: short, name: short, logo: null, amount, price: usd !== null ? usd / amount : null, usd, verified: true });
+  }
+  return out;
+}
+
+async function fetchSolBalances(ep: Endpoint, origin: string, address: string, headers: Record<string, string>): Promise<Balances> {
+  const res = await limitedFetch(requestUrl(`${origin}/v1/pnl-positions?address=${encodeURIComponent(address)}`), { headers });
+  if (res.status === 429) return { rows: [], limited: true, at: Date.now() };
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  let rows = parsePositions(await res.json());
+  const meta = await ensureTokenMeta(ep, rows.map((r) => r.tokenId));
+  rows = rows.map((r) => {
+    const m = meta.get(r.tokenId);
+    return m ? { ...r, symbol: m.symbol ?? r.symbol, name: m.name ?? m.symbol ?? r.name, logo: m.logo ?? null } : r;
+  });
+  rows.sort((a, b) => (b.usd ?? -1) - (a.usd ?? -1));
+  return { rows, limited: false, at: Date.now() };
+}
+
 export async function fetchBalances(ep: Endpoint, origin: string, address: string): Promise<Balances> {
   const headers: Record<string, string> = { accept: 'application/json' };
   if (ep.authHeader && ep.apiKey) headers[ep.authHeader] = ep.apiKey;
+  if (ep.family === 'sol') return fetchSolBalances(ep, origin, address, headers);
   const get = async (url: string) => limitedFetch(requestUrl(url), { headers });
   const id = encodeURIComponent(address);
   const res = await get(`${balancePath(origin, 'chains')}?id=${id}`);
@@ -123,7 +156,7 @@ export interface BalanceState {
 /** โหลดยอดเมื่อ active เป็นจริงครั้งแรกต่อกระเป๋า (แท็บ Tokens เปิดอยู่); reload = ยิงใหม่ */
 export function useBalances(wallet: Wallet, endpoints: Endpoint[], active: boolean): BalanceState {
   const src = balanceSource(endpoints, wallet);
-  const key = src ? `${src.origin}|${wallet.address.toLowerCase()}` : '';
+  const key = src ? `${src.origin}|${(wallet.family === 'sol' ? wallet.address : wallet.address.toLowerCase())}` : '';
   const [data, setData] = useState<Balances | null>(() => cache.get(key) ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
