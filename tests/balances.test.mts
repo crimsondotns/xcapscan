@@ -42,16 +42,22 @@ test('source: first enabled endpoint of the wallet family', () => {
 test('429 mid-way: stops, returns what it has, flags limited', async () => {
   setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
   const seen: string[] = [];
+  let hit429 = false;
+  let afterHit = 0;
   (globalThis as { fetch: unknown }).fetch = async (u: string) => {
+    if (hit429) afterHit++;
     seen.push(u);
-    if (u.includes('used_chain_list')) return fake(200, [{ id: 'eth' }, { id: 'op' }, { id: 'base' }]);
+    if (u.includes('used_chain_list')) return fake(200, [{ id: 'eth' }, { id: 'op' }, { id: 'base' }, { id: 'arb' }]);
     if (u.includes('chain_id=eth')) return fake(200, [{ id: 'eth', symbol: 'ETH', amount: 1, price: 2000 }]);
+    hit429 = true;
     return fake(429, {});
   };
   const b = await fetchBalances(ep({}), 'https://src.invalid', '0xabc');
   assert.equal(b.limited, true);
   assert.equal(b.rows.length, 1);
-  assert.equal(seen.filter((u) => u.includes('token_list')).length, 2, 'no request after the 429');
+  // คำขอที่อีกงานส่งเข้าคิวไว้ก่อนเห็น 429 อาจออกหลังคิวพักครบ ได้มากสุด 1 (= PARALLEL − 1) ไม่มีคำขอใหม่เกินนั้น
+  assert.ok(afterHit <= 1, 'at most the one request already queued');
+  assert.ok(seen.filter((u) => u.includes('token_list')).length < 4, 'remaining chains skipped');
   setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
 });
 
@@ -115,4 +121,24 @@ test('exact decimals: raw ÷ 10^decimals, string sums, source text kept, grouped
   const [row] = parseTokenList(j, 'eth');
   if (typeof (j.data[0]!.raw_amount) === 'string') assert.equal(row!.exact, '6121694.927414180623165749');
   assert.equal(formatDecimalText('6121694.927414180623165749'), '6,121,694.927414180623165749');
+});
+
+test('balances: token_list per chain runs 2 at a time (not one by one), partial results reported', async () => {
+  setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
+  let live = 0;
+  let peak = 0;
+  (globalThis as { fetch: unknown }).fetch = async (u: string) => {
+    if (u.includes('used_chain_list')) return fake(200, [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }]);
+    live++;
+    peak = Math.max(peak, live);
+    await new Promise((r) => setTimeout(r, 30));
+    live--;
+    const c = /chain_id=(\w+)/.exec(u)![1];
+    return fake(200, [{ id: c, symbol: c.toUpperCase(), amount: 1, price: 1 }]);
+  };
+  const parts: number[] = [];
+  const b = await fetchBalances(ep({ id: 'par' }), 'https://par.invalid', '0xpar', (p) => parts.push(p.rows.length));
+  assert.equal(b.rows.length, 4);
+  assert.equal(peak, 2);
+  assert.deepEqual(parts, [1, 2, 3, 4]);
 });

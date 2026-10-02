@@ -32,6 +32,9 @@ export function solTokenTemplate(url: string, mint: string): string | null {
   }
 }
 
+/** แคชในหน่วยความจำต่อ (แหล่ง|กระเป๋า|เชน|โทเคน) — กลับมาหน้าเดิมไม่ยิงซ้ำ (เหมือนยอดคงเหลือ) */
+const cache = new Map<string, { rows: TxRow[]; next: Cursor | null; done: boolean }>();
+
 /** แม่แบบที่เลื่อนหน้าได้ต้องมีช่อง cursor/offset/next/start อย่างใดอย่างหนึ่ง */
 const PAGED = /\{(cursor|offset|next|start)\}/;
 
@@ -75,6 +78,7 @@ export function useTokenHistory(wallet: Wallet | null, endpoints: Endpoint[], ch
         rowsRef.current = [...rowsRef.current, ...fresh];
         setRows(rowsRef.current);
         setNext(page.next);
+        cache.set(k, { rows: rowsRef.current, next: page.next, done: !page.next || fresh.length === 0 || !PAGED.test(tpl!) });
         /* หยุดเมื่อ: แหล่งไม่ให้หน้าถัดไป · ไม่มีแถวใหม่ (ได้หน้าเดิมซ้ำ) · แม่แบบไม่มีช่องเลื่อนหน้า (ขอซ้ำก็ได้ URL เดิม) — กันยิงวนไม่จบ */
         setDone(!page.next || fresh.length === 0 || !PAGED.test(tpl!));
       } catch (e) {
@@ -93,11 +97,19 @@ export function useTokenHistory(wallet: Wallet | null, endpoints: Endpoint[], ch
   useEffect(() => {
     live.current = key;
     busy.current = false;
+    setLimited(false);
+    const hit = cache.get(key);
+    if (hit) {
+      rowsRef.current = hit.rows;
+      setRows(hit.rows);
+      setNext(hit.next);
+      setDone(hit.done);
+      return;
+    }
     rowsRef.current = [];
     setRows([]);
     setNext(null);
     setDone(false);
-    setLimited(false);
     if (supported) void load(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);

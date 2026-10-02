@@ -144,24 +144,30 @@ export function parsePositions(j: unknown): BalanceRow[] {
   return out;
 }
 
-async function fetchSolBalances(ep: Endpoint, origin: string, address: string, headers: Record<string, string>): Promise<Balances> {
+async function fetchSolBalances(ep: Endpoint, origin: string, address: string, headers: Record<string, string>, onPartial?: (b: Balances) => void): Promise<Balances> {
   const res = await limitedFetch(requestUrl(`${origin}/v1/pnl-positions?address=${encodeURIComponent(address)}&filter=recentlyActive`), { headers });
   if (res.status === 429) return { rows: [], limited: true, at: Date.now() };
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  let rows = parsePositions(parseJsonExact(await res.text()));
+  let rows = byUsd(parsePositions(parseJsonExact(await res.text())));
+  /* ตารางขึ้นทันที (ชื่อเป็น mint ย่อชั่วคราว) แล้วค่อยเติมชื่อ/โลโก้เมื่อ metadata มา — ไม่ให้ทั้งตารางรอ */
+  onPartial?.({ rows, limited: false, at: Date.now() });
   const meta = await ensureTokenMeta(ep, rows.map((r) => r.tokenId));
   rows = rows.map((r) => {
     const m = meta.get(r.tokenId);
     return m ? { ...r, symbol: m.symbol ?? r.symbol, name: m.name ?? m.symbol ?? r.name, logo: m.logo ?? null } : r;
   });
-  rows.sort((a, b) => (b.usd ?? -1) - (a.usd ?? -1));
   return { rows, limited: false, at: Date.now() };
 }
 
-export async function fetchBalances(ep: Endpoint, origin: string, address: string): Promise<Balances> {
+const byUsd = (rows: BalanceRow[]) => [...rows].sort((a, b) => (b.usd ?? -1) - (a.usd ?? -1));
+/** ยิง token_list พร้อมกันได้เท่าขีดของคิว limitedFetch */
+const PARALLEL = 2;
+
+/** onPartial = ผลระหว่างทาง (เชนไหนเสร็จก็ขึ้นตารางก่อน) */
+export async function fetchBalances(ep: Endpoint, origin: string, address: string, onPartial?: (b: Balances) => void): Promise<Balances> {
   const headers: Record<string, string> = { accept: 'application/json' };
   if (ep.authHeader && ep.apiKey) headers[ep.authHeader] = ep.apiKey;
-  if (ep.family === 'sol') return fetchSolBalances(ep, origin, address, headers);
+  if (ep.family === 'sol') return fetchSolBalances(ep, origin, address, headers, onPartial);
   const get = async (url: string) => limitedFetch(requestUrl(url), { headers });
   const id = encodeURIComponent(address);
   const res = await get(`${balancePath(origin, 'chains')}?id=${id}`);
@@ -170,17 +176,23 @@ export async function fetchBalances(ep: Endpoint, origin: string, address: strin
   const chains = parseChainIds(await res.json());
   const rows: BalanceRow[] = [];
   let limited = false;
-  for (const c of chains) {
-    const r = await get(`${balancePath(origin, 'tokens')}?id=${id}&is_all=true&chain_id=${encodeURIComponent(c)}`);
-    if (r.status === 429) {
-      limited = true;
-      break;
+  let next = 0;
+  /* เดิมรอทีละเชน — ตอนนี้ PARALLEL งานดึงเชนถัดไปจากคิวร่วม; เจอ 429 ทุกงานหยุดหยิบเชนใหม่ */
+  const worker = async () => {
+    while (!limited && next < chains.length) {
+      const c = chains[next++]!;
+      const r = await get(`${balancePath(origin, 'tokens')}?id=${id}&is_all=true&chain_id=${encodeURIComponent(c)}`);
+      if (r.status === 429) {
+        limited = true;
+        return;
+      }
+      if (!r.ok) continue;
+      rows.push(...parseTokenList(parseJsonExact(await r.text()), c));
+      onPartial?.({ rows: byUsd(rows), limited: false, at: Date.now() });
     }
-    if (!r.ok) continue;
-    rows.push(...parseTokenList(parseJsonExact(await r.text()), c));
-  }
-  rows.sort((a, b) => (b.usd ?? -1) - (a.usd ?? -1));
-  return { rows, limited, at: Date.now() };
+  };
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, chains.length) }, worker));
+  return { rows: byUsd(rows), limited, at: Date.now() };
 }
 
 /**
@@ -221,7 +233,7 @@ export function useBalances(wallet: Wallet, endpoints: Endpoint[], active: boole
     let live = true;
     setLoading(true);
     setError(false);
-    fetchBalances(src.ep, src.origin, wallet.address)
+    fetchBalances(src.ep, src.origin, wallet.address, (b) => live && setData(b))
       .then((b) => {
         cache.set(key, b);
         rememberBalancePrices(b.rows);
