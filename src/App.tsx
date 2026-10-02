@@ -1,3 +1,4 @@
+import { BackToTop } from './components/BackToTop';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from './i18n';
 import { useStore } from './store';
@@ -322,6 +323,7 @@ export function App() {
             </div>
           ) : null}
         </main>
+        <BackToTop />
       </div>
 
       <SettingsDialog open={settingsOpen} onClose={closeDialog} />

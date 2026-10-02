@@ -114,4 +114,5 @@ Do not declare work done while any of these is red.
 ## เอาออกแล้ว (ผู้ใช้ 2026-10-02)
 - แท็บ Related wallets (holders) ในหน้าโทเคน — หน้าโทเคนเหลือการ์ด My balance + ประวัติ
 - `.headline` (หัวการ์ด: ตัวเลขใหญ่/ชื่อกระเป๋า/ปุ่มโหลด/แท็ก/RangeChips), กราฟ `FlowChart` และ `.stat-row` ถูกลบออกจากทุกหน้า (Dashboard / WalletPage / AssetPage) — ห้ามใส่กลับเอง
+- ปุ่ม Back to top (`components/BackToTop.tsx`) ลอยมุมขวาล่างทุกจอ ขึ้นเมื่อเลื่อนลงเกิน 1 จอ (ผู้ใช้ 2026-10-02)
 - ธุรกรรมล่าสุดมีสวิตช์ Hide suspicious (ค่าเดียวกับ `settings.hideScam`)
