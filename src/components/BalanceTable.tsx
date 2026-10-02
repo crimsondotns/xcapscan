@@ -94,9 +94,10 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
             {t('tx.hideScam')}
           </FieldLabel>
         </Field>
-        <Button type="button" variant="ghost" size="sm" disabled={bal.loading} onClick={bal.reload}>
+        {/* มือถือ: ไอคอนอย่างเดียวท้ายแถวเดียวกับ Filters (ไม่ขึ้นบรรทัดเอง) */}
+        <Button type="button" variant="ghost" disabled={bal.loading} onClick={bal.reload} aria-label={t('bal.reload')} className="max-sm:ml-auto max-sm:size-8 max-sm:px-0">
           <RefreshCwIcon data-icon="inline-start" />
-          {t('bal.reload')}
+          <span className="max-sm:sr-only">{t('bal.reload')}</span>
         </Button>
         <span className="count" aria-live="polite">
           {t('token.count', { n: rows.length })} · {t('bal.total')} {formatUsdExact(total)}

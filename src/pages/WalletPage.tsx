@@ -86,7 +86,8 @@ export function WalletPage({
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <section className="panel">
+      {/* ใต้ breadcrumb: ไม่ซ้อน padding บนของการ์ดกับ gap ของ stack; มือถือชิดขอบหน้าเท่าหัวเว็บ */}
+      <section className="panel pt-0 max-sm:px-0">
         <PageTabs
           value={tab}
           onChange={setTab}
