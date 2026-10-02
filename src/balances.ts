@@ -76,6 +76,14 @@ export function parseTokenList(j: unknown, chain: string): BalanceRow[] {
   return out;
 }
 
+/** ตัวกรองตาราง/หน้าโทเคน: q จับ symbol/name (มีคำนี้) หรือ token address (ขึ้นต้นด้วย) ไม่สนตัวพิมพ์; chain '' = ทุกเชน */
+export function matchBalance(r: BalanceRow, q: string, chain = ''): boolean {
+  if (chain && r.chain !== chain) return false;
+  const s = q.trim().toLowerCase();
+  if (!s) return true;
+  return r.symbol.toLowerCase().includes(s) || r.name.toLowerCase().includes(s) || r.tokenId.toLowerCase().startsWith(s);
+}
+
 export async function fetchBalances(ep: Endpoint, origin: string, address: string): Promise<Balances> {
   const headers: Record<string, string> = { accept: 'application/json' };
   if (!viaWrapper(ep.url) && ep.authHeader && ep.apiKey) headers[ep.authHeader] = ep.apiKey;

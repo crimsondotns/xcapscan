@@ -1,6 +1,6 @@
 /** ยอดคงเหลือรายโทเคนของกระเป๋า (แท็บ Tokens เมื่อมีแหล่ง ERC-20) — คลิกแถวเพื่อไปหน้าโทเคนนั้น */
 import { useMemo, useState } from 'react';
-import type { BalanceState, BalanceRow } from '../balances';
+import { matchBalance, type BalanceState, type BalanceRow } from '../balances';
 import { formatAmount, formatPrice, formatUsdExact } from '../format';
 import { useI18n } from '../i18n';
 import { useStore } from '../store';
@@ -16,7 +16,10 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
-import { RefreshCwIcon } from 'lucide-react';
+import { RefreshCwIcon, SearchIcon } from 'lucide-react';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Dropdown } from './Dropdown';
+import { Logo } from './Logo';
 
 type SortKey = 'token' | 'amount' | 'price' | 'value';
 
@@ -24,17 +27,40 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
   const { t } = useI18n();
   const { settings, setHideScam } = useStore();
   const hideScam = settings.hideScam;
+  const [q, setQ] = useState('');
+  const [chainSel, setChainSel] = useState('');
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'value', dir: -1 });
   const head = useStickyHead();
   const all = bal.data?.rows ?? [];
   const rows = useMemo(() => {
     const val = (r: BalanceRow) => (sort.key === 'token' ? r.symbol.toLowerCase() : sort.key === 'amount' ? r.amount : sort.key === 'price' ? (r.price ?? -1) : (r.usd ?? -1));
-    return (hideScam ? all.filter((r) => r.verified) : all).slice().sort((a, b) => {
+    return all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, chainSel)).sort((a, b) => {
       const x = val(a);
       const y = val(b);
       return (x > y ? 1 : x < y ? -1 : 0) * sort.dir;
     });
-  }, [all, hideScam, sort]);
+  }, [all, hideScam, sort, q, chainSel]);
+  /* เชนที่มีในยอด + จำนวนโทเคน — ตัวเลือกของ dropdown */
+  const chainOpts = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const r of all) n.set(r.chain, (n.get(r.chain) ?? 0) + 1);
+    return [
+      { value: '', label: t('bal.allChains'), meta: all.length },
+      ...[...n].map(([id, count]) => {
+        const c = chainOf(chains, id);
+        return {
+          value: id,
+          label: (
+            <span className="opt">
+              <Logo src={c?.logo ?? null} name={c?.name ?? id} size={18} />
+              {c?.name ?? id}
+            </span>
+          ),
+          meta: count,
+        };
+      }),
+    ];
+  }, [all, chains, t]);
   const total = rows.reduce((s, r) => s + (r.usd ?? 0), 0);
   const wait = Math.ceil(pausedFor() / 1000);
 
@@ -49,7 +75,17 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
 
   return (
     <>
-      <div className="toolbar">
+      <div className="toolbar" role="search">
+        <label className="sr-only" htmlFor="bal-q">
+          {t('bal.search')}
+        </label>
+        <InputGroup className="max-w-sm">
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+          <InputGroupInput id="bal-q" name="bq" type="search" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
+        </InputGroup>
+        {chainOpts.length > 2 && <Dropdown value={chainSel} options={chainOpts} onChange={setChainSel} label={t('bal.allChains')} />}
         <Field orientation="horizontal" className="w-auto">
           <Switch id="bal-hide-scam" checked={hideScam} onCheckedChange={(v) => setHideScam(v)} />
           <FieldLabel htmlFor="bal-hide-scam" className="font-normal">
@@ -72,7 +108,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
       {!bal.loading && rows.length === 0 && bal.data ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>{t('bal.empty')}</EmptyTitle>
+            <EmptyTitle>{all.length ? t('tx.emptyFiltered') : t('bal.empty')}</EmptyTitle>
           </EmptyHeader>
         </Empty>
       ) : (

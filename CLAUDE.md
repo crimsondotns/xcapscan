@@ -106,3 +106,5 @@ Do not declare work done while any of these is red.
 - โหลดเมื่อเปิดแท็บ Tokens ครั้งแรกต่อกระเป๋า แคชในหน่วยความจำ ปุ่ม Reload balance ยิงใหม่; สถิติหัวกระเป๋าช่องที่ 4 = Balance (ผลรวม USD)
 - คอลัมน์ Token · Amount · Price · Value (เรียงตาม Value) มือถือเหลือ Token · Value (จำนวนใต้มูลค่า); Hide suspicious ซ่อนโทเคนที่ `is_verified === false`
 - กระเป๋า Solana / ไม่มีแหล่ง ERC-20 → แท็บ Tokens ยังเป็นสรุปเข้า-ออกจากประวัติ (`TokenTable`) เหมือนเดิม
+- ตาราง Balance มีช่องค้นหา (symbol/name มีคำนี้ หรือ token address ขึ้นต้นด้วย — `matchBalance`) + dropdown เชน (แสดงเมื่อมี ≥2 เชน)
+- หน้าโทเคน (`AssetPage`, เปิดจากกระเป๋า) มีการ์ด **My balance** ต่อเชน: จำนวน · ≈ USD · contract (คัดลอก + "View on explorer" `<explorer>/token/<address>`) หรือป้ายเหรียญหลัก — เป็นหน้า ไม่ใช่ Dialog (ผู้ใช้ 2026-10-02); ใช้ `useBalances` (แคชเดียวกับแท็บ Tokens)

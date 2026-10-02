@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { balanceSource, fetchBalances, parseChainIds, parseTokenList } from '../src/balances.ts';
+import { balanceSource, fetchBalances, matchBalance, parseChainIds, parseTokenList } from '../src/balances.ts';
 import { setLimiterTiming } from '../src/limiter.ts';
 import type { Endpoint } from '../src/store.ts';
 
@@ -53,4 +53,21 @@ test('429 mid-way: stops, returns what it has, flags limited', async () => {
   assert.equal(b.rows.length, 1);
   assert.equal(seen.filter((u) => u.includes('token_list')).length, 2, 'no request after the 429');
   setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
+});
+
+test('filter: symbol/name contains, token address prefix, chain', () => {
+  const [usdc, eth] = parseTokenList(
+    [
+      { id: '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', chain: 'eth', symbol: 'USDC', name: 'USD Coin', amount: 1, price: 1 },
+      { id: 'op', chain: 'op', symbol: 'ETH', name: 'Ether', amount: 1, price: 1 },
+    ],
+    'eth',
+  ) as [never, never];
+  assert.equal(matchBalance(usdc, 'usd'), true);
+  assert.equal(matchBalance(usdc, 'coin'), true);
+  assert.equal(matchBalance(usdc, '0xa0b8'), true, 'address prefix, any case');
+  assert.equal(matchBalance(usdc, '6eb48'), false, 'address must match from the start');
+  assert.equal(matchBalance(eth, ''), true);
+  assert.equal(matchBalance(eth, '', 'eth'), false);
+  assert.equal(matchBalance(eth, 'eth', 'op'), true);
 });
