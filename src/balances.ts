@@ -198,3 +198,20 @@ export function useBalances(wallet: Wallet, endpoints: Endpoint[], active: boole
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   return { supported: src !== null, data, loading, error, reload };
 }
+
+/** token id เป็นที่อยู่จริง (EVM 0x… หรือ mint ของ Solana) ไม่ใช่รหัสเหรียญหลัก เช่น eth/op */
+export const isTokenAddress = (id: string): boolean => /^0x[0-9a-f]{40}$/i.test(id) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(id);
+
+/**
+ * ลิงก์ explorer ไปที่กระเป๋าของลูกค้า กรองเฉพาะโทเคนนั้น (ผู้ใช้ 2026-10-02) — host มาจาก chain list เท่านั้น
+ *   EVM: <explorer>/token/<token>?a=<wallet>   · เหรียญหลัก: <explorer>/address/<wallet>
+ *   Solana: <explorer>/account/<wallet>?token_address=<mint>#transfers
+ */
+export function walletTokenUrl(explorer: string | null | undefined, family: 'erc20' | 'sol', wallet: string, tokenId: string): string | null {
+  const host = explorer?.replace(/\/+$/, '');
+  if (!host) return null;
+  const w = encodeURIComponent(wallet);
+  if (!isTokenAddress(tokenId)) return family === 'sol' ? `${host}/account/${w}` : `${host}/address/${w}`;
+  const tk = encodeURIComponent(tokenId);
+  return family === 'sol' ? `${host}/account/${w}?token_address=${tk}#transfers` : `${host}/token/${tk}?a=${w}`;
+}

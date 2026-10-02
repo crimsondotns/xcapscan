@@ -27,7 +27,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Button } from '@/components/ui/button';
 import { CopyIcon, GlobeIcon } from 'lucide-react';
-import { useBalances } from '../balances';
+import { isTokenAddress, useBalances, walletTokenUrl } from '../balances';
 import { useTokenHistory } from '../tokenFeed';
 import { useStore } from '../store';
 
@@ -69,8 +69,9 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
   const top = mine[0] ?? null;
   const mineTotal = mine.reduce((n, r) => n + r.amount, 0);
   const mineUsd = mine.some((r) => r.usd !== null) ? mine.reduce((n, r) => n + (r.usd ?? 0), 0) : null;
-  const topAddr = !!top && /^0x[0-9a-f]{40}$/i.test(top.tokenId);
-  const topHost = top ? chainOf(chains, top.chain)?.explorer?.replace(/\/+$/, '') : undefined;
+  const topAddr = !!top && isTokenAddress(top.tokenId);
+  /* Explorer = กระเป๋าของลูกค้า กรองเฉพาะโทเคนนี้ (ผู้ใช้ 2026-10-02) */
+  const topUrl = top && wallet ? walletTokenUrl(chainOf(chains, top.chain)?.explorer, wallet.family, wallet.address, top.tokenId) : null;
   const chain = chainOf(chains, token?.chain ?? top?.chain ?? tokenChain ?? '') ?? undefined;
   const price = top?.price ?? (token ? priceOf(token.chain, token.tokenId, token.symbol) : null);
   const holders = useMemo(() => {
@@ -123,14 +124,16 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
                     {mineUsd !== null && <span className="text-sm text-muted-foreground tabular-nums">≈ {formatUsdExact(mineUsd)}</span>}
                   </div>
                 </div>
-                {topAddr && (
+                {(topAddr || topUrl) && (
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" onClick={() => copy(top.tokenId)}>
-                      <CopyIcon data-icon="inline-start" />
-                      {t('bal.copyAddress')}
-                    </Button>
-                    {topHost && (
-                      <Button variant="outline" render={<a href={`${topHost}/token/${top.tokenId}`} target="_blank" rel="noopener noreferrer" />}>
+                    {topAddr && (
+                      <Button type="button" variant="outline" onClick={() => copy(top.tokenId)}>
+                        <CopyIcon data-icon="inline-start" />
+                        {t('bal.copyAddress')}
+                      </Button>
+                    )}
+                    {topUrl && (
+                      <Button variant="outline" render={<a href={topUrl} target="_blank" rel="noopener noreferrer" />}>
                         <GlobeIcon data-icon="inline-start" />
                         {t('bal.explorer')}
                       </Button>
