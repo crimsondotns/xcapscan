@@ -59,6 +59,14 @@ export function formatAmountFull(v: number): string {
   return v.toLocaleString(locale, { maximumFractionDigits: 20 });
 }
 
+/** ทศนิยมแบบสตริง (ครบทุกหลัก) → ใส่ตัวคั่นหลักตามภาษา ไม่แตะส่วนทศนิยม */
+export function formatDecimalText(s: string): string {
+  const neg = s.startsWith('-');
+  const [i = '0', f] = (neg ? s.slice(1) : s).split('.');
+  const sep = (1.1).toLocaleString(locale).charAt(1);
+  return `${neg ? '−' : ''}${BigInt(i).toLocaleString(locale)}${f ? `${sep}${f}` : ''}`;
+}
+
 /** ราคาต่อหน่วย — เหรียญราคาจิ๋ว (1e-7) ต้องเห็นเลขนัยสำคัญ ไม่ใช่ $0.00 */
 export function formatPrice(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v) || v === 0) return '—';

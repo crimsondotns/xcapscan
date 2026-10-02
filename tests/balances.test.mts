@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { balanceSource, fetchBalances, matchBalance, parseChainIds, parsePositions, parseTokenList } from '../src/balances.ts';
+import { addDec, balanceSource, fetchBalances, fromRaw, matchBalance, parseChainIds, parseJsonExact, parsePositions, parseTokenList } from '../src/balances.ts';
 import { setLimiterTiming } from '../src/limiter.ts';
 import type { Endpoint } from '../src/store.ts';
 
 setLimiterTiming({ gapMs: 1, basePauseMs: 10, reset: true });
 
 const ep = (over: Partial<Endpoint>): Endpoint => ({ id: 'e', name: 'n', url: 'https://src.invalid/h?id={address}', family: 'erc20', enabled: true, ...over }) as Endpoint;
-const fake = (status: number, body: unknown) => ({ ok: status >= 200 && status < 300, status, headers: { get: () => null }, json: async () => body, clone() { return this; } });
+const fake = (status: number, body: unknown) => ({ ok: status >= 200 && status < 300, status, headers: { get: () => null }, json: async () => body, text: async () => JSON.stringify(body), clone() { return this; } });
 
 test('token list: zero amounts dropped, usd = amount × price, symbol fallback order', () => {
   const rows = parseTokenList(
@@ -102,4 +102,17 @@ test('price cache: an old trade does not overwrite the current SOL price; balanc
   // the old trade loaded again later must not push the price back to 83
   await fetchPage('https://src.invalid/v1/pnl-activity?address={address}', 'w', 'GZ3tQp5qH91afiepNWecsExxdeptwsM9hu1bMVD1i5Ff', null, 20, { family: 'sol' });
   assert.equal(priceOf('sol', null, 'SOL'), 121.4);
+});
+
+test('exact decimals: raw ÷ 10^decimals, string sums, source text kept, grouped display', async () => {
+  const { formatDecimalText } = await import('../src/format.ts');
+  assert.equal(fromRaw('6121694927414180623165749', 18), '6121694.927414180623165749');
+  assert.equal(fromRaw('5', 6), '0.000005');
+  assert.equal(fromRaw('1000000', 6), '1');
+  assert.equal(addDec('0.1', '0.2'), '0.3');
+  assert.equal(addDec('6121694.927414180623165749', '0.000000000000000001'), '6121694.92741418062316575');
+  const j = parseJsonExact('{"data":[{"id":"0xa","amount":6121694.927414180623165749,"raw_amount":6121694927414180623165749,"decimals":18,"price":1}]}') as { data: Array<Record<string, unknown>> };
+  const [row] = parseTokenList(j, 'eth');
+  if (typeof (j.data[0]!.raw_amount) === 'string') assert.equal(row!.exact, '6121694.927414180623165749');
+  assert.equal(formatDecimalText('6121694.927414180623165749'), '6,121,694.927414180623165749');
 });

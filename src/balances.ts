@@ -25,6 +25,8 @@ export interface BalanceRow {
   price: number | null;
   usd: number | null;
   verified: boolean;
+  /** จำนวนแบบทศนิยมครบทุกหลัก (สตริง ไม่ผ่าน float) — จาก raw_amount ÷ 10^decimals หรือข้อความตัวเลขดิบใน JSON; ไม่มี = null */
+  exact?: string | null;
 }
 
 export interface Balances {
@@ -32,6 +34,40 @@ export interface Balances {
   /** เจอ 429 ระหว่างทาง — ได้ไม่ครบทุกเชน */
   limited: boolean;
   at: number;
+}
+
+/* ---------- ทศนิยมครบทุกหลัก (ผู้ใช้ 2026-10-02) ---------- */
+
+/** ฟิลด์จำนวนที่ต้องเก็บข้อความตัวเลขดิบไว้ (JSON.parse แปลงเป็น float แล้วหลักท้ายหาย) */
+const EXACT_KEYS = new Set(['amount', 'raw_amount', 'balance']);
+/** JSON.parse ที่คืนฟิลด์จำนวนเป็นข้อความต้นฉบับ (source text access — เบราว์เซอร์ใหม่); ไม่รองรับก็ได้ number ตามเดิม */
+export function parseJsonExact(text: string): unknown {
+  return JSON.parse(text, function (this: unknown, key: string, value: unknown, ctx?: { source?: string }) {
+    return typeof value === 'number' && EXACT_KEYS.has(key) && ctx?.source ? ctx.source : value;
+  } as (this: unknown, key: string, value: unknown) => unknown);
+}
+
+const DEC_RE = /^-?\d+(\.\d+)?$/;
+/** ข้อความทศนิยมธรรมดา (ไม่มี e) → สตริงมาตรฐาน; อย่างอื่น null */
+const decText = (v: unknown): string | null => (typeof v === 'string' && DEC_RE.test(v.trim()) ? v.trim() : null);
+const trimDec = (s: string) => (s.includes('.') ? s.replace(/0+$/, '').replace(/\.$/, '') : s);
+
+/** จำนวนเต็มดิบ ÷ 10^decimals แบบสตริง */
+export function fromRaw(raw: string, decimals: number): string | null {
+  if (!/^\d+$/.test(raw) || !Number.isInteger(decimals) || decimals < 0 || decimals > 60) return null;
+  const p = raw.padStart(decimals + 1, '0');
+  return trimDec(decimals ? `${p.slice(0, p.length - decimals)}.${p.slice(p.length - decimals)}` : p).replace(/^0+(?=\d)/, '');
+}
+
+/** บวกทศนิยมแบบสตริง (BigInt) — ใช้รวมยอดหลายเชนโดยไม่เพี้ยน */
+export function addDec(a: string, b: string): string {
+  const [ai = '0', af = ''] = a.split('.');
+  const [bi = '0', bf = ''] = b.split('.');
+  const n = Math.max(af.length, bf.length);
+  const sum = BigInt(ai + af.padEnd(n, '0')) + BigInt(bi + bf.padEnd(n, '0'));
+  const neg = sum < 0n;
+  const d = (neg ? -sum : sum).toString().padStart(n + 1, '0');
+  return (neg ? '-' : '') + trimDec(n ? `${d.slice(0, d.length - n)}.${d.slice(d.length - n)}` : d);
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -66,7 +102,10 @@ export function parseTokenList(j: unknown, chain: string): BalanceRow[] {
     if (!amount) continue;
     const price = num(t.price);
     const symbol = str(t.optimized_symbol) ?? str(t.display_symbol) ?? str(t.symbol) ?? '?';
+    const dec = num(t.decimals);
+    const raw = typeof t.raw_amount === 'string' ? t.raw_amount.trim() : null;
     out.push({
+      exact: (raw !== null && dec !== null ? fromRaw(raw, dec) : null) ?? decText(t.amount),
       chain: str(t.chain) ?? chain,
       tokenId: str(t.id) ?? symbol,
       symbol,
@@ -100,7 +139,7 @@ export function parsePositions(j: unknown): BalanceRow[] {
     if (!amount || !id) continue;
     const usd = num(p.balanceValue);
     const short = id.length > 10 ? `${id.slice(0, 6)}…` : id;
-    out.push({ chain: 'sol', tokenId: id, symbol: short, name: short, logo: null, amount, price: usd !== null ? usd / amount : null, usd, verified: true });
+    out.push({ chain: 'sol', tokenId: id, symbol: short, name: short, logo: null, amount, price: usd !== null ? usd / amount : null, usd, verified: true, exact: decText(p.balance) });
   }
   return out;
 }
@@ -109,7 +148,7 @@ async function fetchSolBalances(ep: Endpoint, origin: string, address: string, h
   const res = await limitedFetch(requestUrl(`${origin}/v1/pnl-positions?address=${encodeURIComponent(address)}&filter=recentlyActive`), { headers });
   if (res.status === 429) return { rows: [], limited: true, at: Date.now() };
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  let rows = parsePositions(await res.json());
+  let rows = parsePositions(parseJsonExact(await res.text()));
   const meta = await ensureTokenMeta(ep, rows.map((r) => r.tokenId));
   rows = rows.map((r) => {
     const m = meta.get(r.tokenId);
@@ -138,7 +177,7 @@ export async function fetchBalances(ep: Endpoint, origin: string, address: strin
       break;
     }
     if (!r.ok) continue;
-    rows.push(...parseTokenList(await r.json(), c));
+    rows.push(...parseTokenList(parseJsonExact(await r.text()), c));
   }
   rows.sort((a, b) => (b.usd ?? -1) - (a.usd ?? -1));
   return { rows, limited, at: Date.now() };

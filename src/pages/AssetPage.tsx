@@ -2,13 +2,14 @@
  * หน้าโทเคนหนึ่งตัว — ประวัติเฉพาะโทเคนนั้น ดูได้ทั้งแบบทุกกระเป๋าและเฉพาะกระเป๋าที่เข้ามา
  * ข้อมูลมาจากธุรกรรมที่โหลดไว้แล้วเท่านั้น ไม่มีการยิงคำขอเพิ่มของหน้านี้เอง
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 import type { TxRow } from '../feed';
 import type { ChainMap } from '../chains';
 import type { Wallet } from '../store';
 import type { GroupId } from '../groups';
 import { rowsOfToken, tokenSummary, withinDays } from '../flow';
-import { formatAmountFull, formatUsdExact } from '../format';
+import { formatAmount, formatAmountFull, formatDecimalText, formatUsdExact } from '../format';
 import { useI18n } from '../i18n';
 import { useCopy } from '../copy';
 import type { Range } from '../components/FlowChart';
@@ -22,7 +23,7 @@ import { priceOf } from '../prices';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { CopyIcon, GlobeIcon } from 'lucide-react';
-import { isTokenAddress, useBalances, walletTokenUrl } from '../balances';
+import { addDec, isTokenAddress, useBalances, walletTokenUrl } from '../balances';
 import { useTokenHistory } from '../tokenFeed';
 import { useStore } from '../store';
 
@@ -63,6 +64,9 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
   const top = mine[0] ?? null;
   /* ผลรวมหลายเชน: ตัดเศษทศนิยมลอยตัว (0.1+0.2) ที่ 15 หลักนัยสำคัญ */
   const mineTotal = Number(mine.reduce((n, r) => n + r.amount, 0).toPrecision(15));
+  /* กดที่ตัวเลข = สลับย่อ ↔ ทศนิยมครบทุกหลัก (ผู้ใช้ 2026-10-02) — ครบ = ผลรวมแบบสตริงจากข้อความดิบของแหล่ง (ไม่ผ่าน float) */
+  const mineExact = mine.length && mine.every((r) => r.exact) ? mine.reduce((acc, r) => addDec(acc, r.exact!), '0') : null;
+  const [fullAmt, setFullAmt] = useState(false);
   const mineUsd = mine.some((r) => r.usd !== null) ? mine.reduce((n, r) => n + (r.usd ?? 0), 0) : null;
   const topAddr = !!top && isTokenAddress(top.tokenId);
   /* Explorer = กระเป๋าของลูกค้า กรองเฉพาะโทเคนนี้ (ผู้ใช้ 2026-10-02) */
@@ -106,10 +110,9 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
                     <h2 id="mine-h" className="text-xs text-muted-foreground">
                       {t('bal.mine')}
                     </h2>
-                    {/* ทศนิยมครบทุกหลัก (ผู้ใช้ 2026-10-02) — ตัวเลขยาวขึ้นบรรทัดใหม่แทนการตัด … */}
-                    <span className="text-2xl font-semibold tracking-tight break-all tabular-nums sm:text-3xl">
-                      {formatAmountFull(mineTotal)} <span className="text-base font-medium text-muted-foreground">{top.symbol}</span>
-                    </span>
+                    <button type="button" aria-pressed={fullAmt} title={t(fullAmt ? 'bal.showShort' : 'bal.showFull')} onClick={() => setFullAmt((v) => !v)} className={cn('cursor-pointer rounded-sm text-left text-2xl font-semibold tracking-tight tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:text-3xl', fullAmt ? 'break-all' : 'truncate')}>
+                      {fullAmt ? (mineExact ? formatDecimalText(mineExact) : formatAmountFull(mineTotal)) : formatAmount(mineTotal)} <span className="text-base font-medium text-muted-foreground">{top.symbol}</span>
+                    </button>
                     {mineUsd !== null && <span className="text-sm text-muted-foreground tabular-nums">≈ {formatUsdExact(mineUsd)}</span>}
                   </div>
                 </div>
