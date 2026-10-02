@@ -146,6 +146,12 @@ th.num > [data-slot='button']:not(:last-child) {
   overscroll-behavior: contain;
 }
 
+/* แถวตารางยอดคงเหลือสูงเท่าแถว TxTable (64px จอ ≥640; มือถือสูงตามโลโก้ 40px เท่ากันอยู่แล้ว) — ผู้ใช้ 2026-10-02 */
+@media (min-width: 640px) {
+  .tx.bal tbody td {
+    height: 4rem;
+  }
+}
 /* หัวตาราง (ผู้ใช้ 2026-10-02): ไม่มีเส้นใต้ สูงพอดีตัวอักษร — เงานุ่มใต้หัวเฉพาะตอนติดบนจอ (data-stuck) */
 [data-slot='table-header'] tr {
   border-bottom: 0;

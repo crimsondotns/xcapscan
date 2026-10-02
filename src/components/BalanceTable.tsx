@@ -1,6 +1,6 @@
 /** ยอดคงเหลือรายโทเคนของกระเป๋า (แท็บ Tokens เมื่อมีแหล่งตระกูลเดียวกับกระเป๋า) — คลิกแถวเพื่อไปหน้าโทเคนนั้น */
 import { useMemo, useState } from 'react';
-import { matchBalance, type BalanceState, type BalanceRow } from '../balances';
+import { type BalanceState, type BalanceRow } from '../balances';
 import { formatAmount, formatPrice, formatUsdExact } from '../format';
 import { useI18n } from '../i18n';
 import { useStore } from '../store';
@@ -16,11 +16,10 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
-import { RefreshCwIcon, SearchIcon } from 'lucide-react';
+import { RefreshCwIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { BAL_EMPTY, BalanceFilterButton, ColumnFilter, BalanceFilterChips, inUsdRange, type BalFilter } from './BalanceFilter';
+import { BAL_EMPTY, BalanceFilterButton, ColumnFilter, BalanceFilterChips, passBal, type BalFilter } from './BalanceFilter';
 import { Logo } from './Logo';
 
 type SortKey = 'token' | 'amount' | 'price' | 'value';
@@ -29,7 +28,6 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
   const { t } = useI18n();
   const { settings, setHideScam } = useStore();
   const hideScam = settings.hideScam;
-  const [q, setQ] = useState('');
   /* ปุ่ม Filters: เชน + ช่วงมูลค่า USD (ผู้ใช้ 2026-10-02) */
   const [bf, setBf] = useState<BalFilter>(BAL_EMPTY);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'value', dir: -1 });
@@ -38,12 +36,12 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
   const all = bal.data?.rows ?? [];
   const rows = useMemo(() => {
     const val = (r: BalanceRow) => (sort.key === 'token' ? r.symbol.toLowerCase() : sort.key === 'amount' ? r.amount : sort.key === 'price' ? (r.price ?? -1) : (r.usd ?? -1));
-    return all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, bf.chain) && inUsdRange(r.usd, bf)).sort((a, b) => {
+    return all.filter((r) => (!hideScam || r.verified) && passBal(r, bf)).sort((a, b) => {
       const x = val(a);
       const y = val(b);
       return (x > y ? 1 : x < y ? -1 : 0) * sort.dir;
     });
-  }, [all, hideScam, sort, q, bf]);
+  }, [all, hideScam, sort, bf]);
   /* เชนที่มีในยอด + จำนวนโทเคน — ตัวเลือกของ dropdown */
   const chainOpts = useMemo(() => {
     const n = new Map<string, number>();
@@ -68,7 +66,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
   const total = rows.reduce((s, r) => s + (r.usd ?? 0), 0);
   const wait = Math.ceil(pausedFor() / 1000);
 
-  const countFor = (f: BalFilter) => all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, f.chain) && inUsdRange(r.usd, f)).length;
+  const countFor = (f: BalFilter) => all.filter((r) => (!hideScam || r.verified) && passBal(r, f)).length;
   /* Token กินที่เหลือ · ตัวเลข 3 คอลัมน์กว้างเท่ากัน 18% (ผู้ใช้ 2026-10-02) */
   const Th = ({ k, label, num, filter }: { k: SortKey; label: string; num?: boolean; filter?: 'chain' | 'usd' }) => (
     <TableHead scope="col" className={cn(num && 'num sm:w-[18%]')} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
@@ -76,22 +74,13 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
         {label}
         <Icon name={sort.key === k ? (sort.dir === 1 ? 'chevronUp' : 'chevronDown') : 'chevronsUpDown'} className="th-ico" />
       </Button>
-      {filter && !mobile && <ColumnFilter field={filter} label={filter === 'chain' ? t('tx.col.chain') : `${label} (USD)`} value={bf} onChange={setBf} chains={chainOpts} countFor={countFor} />}
+      {filter && !mobile && <ColumnFilter field={filter} label={filter === 'chain' ? label : `${label} (USD)`} value={bf} onChange={setBf} chains={chainOpts} countFor={countFor} />}
     </TableHead>
   );
 
   return (
     <>
-      <div className="toolbar" role="search">
-        <label className="sr-only" htmlFor="bal-q">
-          {t('bal.search')}
-        </label>
-        <InputGroup className="max-w-sm">
-          <InputGroupAddon>
-            <SearchIcon />
-          </InputGroupAddon>
-          <InputGroupInput id="bal-q" name="bq" type="search" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
-        </InputGroup>
+      <div className="toolbar">
         {/* ปุ่ม Filters เฉพาะมือถือ — จอกว้างกรองจากหัวคอลัมน์ (ผู้ใช้ 2026-10-02) */}
         {mobile && <BalanceFilterButton value={bf} onChange={setBf} chains={chainOpts} countFor={countFor} />}
         <Field orientation="horizontal" className="w-auto">
@@ -126,7 +115,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
           <Table containerClassName="lg:overflow-visible" className="tx bal">
             <TableHeader ref={head.ref} data-stuck={head.stuck}>
               <TableRow>
-                <Th k="token" label={t('tab.tokens')} filter={chainOpts.length > 2 ? 'chain' : undefined} />
+                <Th k="token" label={t('tab.tokens')} filter="chain" />
                 <Th k="amount" label={t('bal.col.amount')} num />
                 <Th k="price" label={t('bal.col.price')} num />
                 <Th k="value" label={t('bal.col.value')} num filter="usd" />
@@ -149,10 +138,10 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
                       }
                     }}
                   >
-                    {/* มือถือ: กินที่เหลือ (ตัด …); จอใหญ่: กว้างพอดีเนื้อหา ให้คอลัมน์ตัวเลขแบ่งที่ที่เหลือ — ไม่เว้นช่องโล่งก่อน Amount (ผู้ใช้ 2026-10-02) */}
+                    {/* กินที่เหลือ (มือถือตัด …); โลโก้ 40px = แถวสูงเท่า TxTable (ผู้ใช้ 2026-10-02) */}
                     <TableCell className="max-sm:w-full max-sm:max-w-0">
                       <span className="who">
-                        <TokenLogo token={r.logo} tokenName={r.symbol} chain={chain?.logo ?? null} chainName={chain?.name ?? r.chain} size={28} />
+                        <TokenLogo token={r.logo} tokenName={r.symbol} chain={chain?.logo ?? null} chainName={chain?.name ?? r.chain} size={40} />
                         <span className="act-text min-w-0">
                           <span className="act-title truncate">
                             {r.symbol}
