@@ -6,7 +6,6 @@
  *    ถ้าแหล่งไหนต้องใช้กุญแจจริงๆ กุญแจนั้นจะเป็นสาธารณะทันที — อย่าใส่กุญแจที่เสียหายได้ถ้าหลุด
  *
  * ค่าที่รองรับ (ทั้งหมดไม่บังคับ):
- *   VITE_WRAPPER_URL     ที่อยู่ของ API wrapper (ดู worker/) — url ของแหล่งข้อมูลเขียนเป็น "<ชื่อย่อ>/<path>" ได้
  *   VITE_SOURCES         JSON: [{ "name": "...", "url": "...{address}...", "family": "erc20"|"sol",
  *                                 "authHeader": "...", "apiKey": "...", "metaUrl": "..." }]
  *   VITE_CHAIN_LIST_URL  URL รายชื่อเชน

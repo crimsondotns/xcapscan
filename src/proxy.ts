@@ -10,46 +10,16 @@ export function setProxy(t: string): void {
   template = t.trim();
 }
 
-const env = (import.meta as unknown as { env?: { DEV?: boolean; BASE_URL?: string; VITE_WRAPPER_URL?: string } }).env;
+const env = (import.meta as unknown as { env?: { DEV?: boolean; BASE_URL?: string } }).env;
 
-/*
- * API wrapper (ดู worker/) — ที่อยู่ของมันเป็นค่าสาธารณะ ฝังตอน build ผ่าน VITE_WRAPPER_URL ได้
- * แม่แบบของแหล่งข้อมูลที่ไม่ได้ขึ้นต้นด้วย https:// ถือเป็น "<ชื่อย่อ>/<path>" ของ wrapper
- * ผลคือเบราว์เซอร์เห็นแค่ที่อยู่ wrapper ส่วน URL จริงของแหล่งข้อมูลและกุญแจอยู่ฝั่งเซิร์ฟเวอร์เท่านั้น
- */
-const trimEnd = (u: string) => u.trim().replace(/\/+$/, '');
-let wrapper = trimEnd(env?.VITE_WRAPPER_URL ?? '');
-
-/** ตั้งที่อยู่ wrapper เอง (เทสต์) */
-export function setWrapper(u: string): void {
-  wrapper = trimEnd(u);
-}
-
-export function wrapperBase(): string {
-  return wrapper;
-}
-
-/** แม่แบบนี้วิ่งผ่าน wrapper ไหม (ไม่ใช่ URL เต็ม = ใช่) */
-export function viaWrapper(tpl: string): boolean {
-  return !/^https?:\/\//i.test(tpl.trim());
-}
-
-/** "<ชื่อย่อ>/<path>" → URL เต็มของ wrapper; URL เต็มอยู่แล้ว → คืนเดิม */
-export function resolveUrl(tpl: string): string {
-  const u = tpl.trim();
-  if (!viaWrapper(u) || !wrapper) return u;
-  return `${wrapper}/s/${u.replace(/^\/+/, '')}`;
-}
-
-/** แม่แบบนี้ยิงได้ไหม — URL เต็ม หรือ path ของ wrapper ที่ตั้ง wrapper ไว้แล้ว */
+/** แม่แบบนี้ยิงได้ไหม — ต้องเป็น URL เต็ม https:// */
 export function usableUrl(tpl: string): boolean {
-  const u = tpl.trim();
-  return /^https:\/\//i.test(u) || (u !== '' && wrapper !== '');
+  return /^https:\/\//i.test(tpl.trim());
 }
 
-/** URL ที่ควรยิงจริง: ผ่าน wrapper ถ้าเป็นแม่แบบแบบชื่อย่อ แล้วค่อยผ่านชั้น CORS */
+/** URL ที่ควรยิงจริง: ผ่านชั้น CORS (proxy ที่ผู้ใช้ตั้ง / dev proxy) */
 export function requestUrl(tpl: string): string {
-  return proxied(resolveUrl(tpl));
+  return proxied(tpl.trim());
 }
 /** origin ที่ยิงตรงแล้วโดน CORS/เครือข่ายบล็อก → ครั้งต่อไปใช้ proxy เลย ไม่ต้องลองตรงซ้ำ */
 const needsProxy = new Set<string>();

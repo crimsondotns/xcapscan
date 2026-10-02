@@ -35,7 +35,6 @@ jobs:
           VITE_SOURCES: ${{ secrets.SOURCES }}
           VITE_CHAIN_LIST_URL: ${{ secrets.CHAIN_LIST_URL }}
           VITE_CHAINS: ${{ secrets.CHAINS }}
-          VITE_WRAPPER_URL: ${{ vars.API_WRAPPER_URL }}
           VITE_IPFS_GATEWAYS: 'https://gateway.pinata.cloud/ipfs/,https://cloudflare-ipfs.com/ipfs/,https://dweb.link/ipfs/,https://w3s.link/ipfs/,https://nftstorage.link/ipfs/'
           ALLOW_EMBEDDED_KEYS: '1'
       - run: pnpm check:dist

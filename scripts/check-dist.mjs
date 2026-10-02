@@ -1,7 +1,6 @@
 /**
  * ด่านหลัง build — ต้องไม่มีความลับหลุดเข้า dist/
  * หน้าเว็บเป็น static ทุกไบต์ใน dist/ ถือว่าสาธารณะ: กุญแจ/โทเคน/URL ของแหล่งข้อมูลจริงต้องไม่อยู่ในนี้
- * (ที่อยู่ของ API wrapper ไม่ใช่ความลับ จึงอนุญาต — ดู docs/api-wrapper.md)
  */
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';

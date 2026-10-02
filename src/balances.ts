@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { limitedFetch } from './limiter';
-import { requestUrl, viaWrapper } from './proxy';
+import { requestUrl } from './proxy';
 import type { Endpoint, Wallet } from './store';
 
 export interface BalanceRow {
@@ -35,17 +35,11 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
 const listOf = (j: unknown): unknown[] => (Array.isArray(j) ? j : isObj(j) && Array.isArray(j.data) ? j.data : []);
 
-/** แหล่ง ERC-20 ตัวแรกที่เปิดอยู่ (ตามลำดับความสำคัญ) — กระเป๋า Solana / ไม่มีแหล่ง = null
- *  origin = URL เต็มของแหล่ง หรือ "<alias>" เมื่อแหล่งวิ่งผ่าน API wrapper (url แบบ "b/h") */
+/** แหล่ง ERC-20 ตัวแรกที่เปิดอยู่ (ตามลำดับความสำคัญ) — กระเป๋า Solana / ไม่มีแหล่ง = null */
 export function balanceSource(endpoints: Endpoint[], wallet: Pick<Wallet, 'family'>): { ep: Endpoint; origin: string } | null {
   if (wallet.family !== 'erc20') return null;
   for (const ep of endpoints) {
     if (!ep.enabled || ep.family !== 'erc20') continue;
-    if (viaWrapper(ep.url)) {
-      const alias = ep.url.trim().replace(/^\/+/, '').split('/')[0];
-      if (alias) return { ep, origin: alias };
-      continue;
-    }
     try {
       return { ep, origin: new URL(ep.url).origin };
     } catch {
@@ -55,9 +49,7 @@ export function balanceSource(endpoints: Endpoint[], wallet: Pick<Wallet, 'famil
   return null;
 }
 
-/** path ของ 2 ปลายทาง: ยิงตรง = path จริง; ผ่าน wrapper = ชื่อเส้นทางย่อ u / l (ต้องอยู่ใน UPSTREAM_<ALIAS>_ROUTES ของ worker) */
-const balancePath = (origin: string, kind: 'chains' | 'tokens') =>
-  viaWrapper(origin) ? `${origin}/${kind === 'chains' ? 'u' : 'l'}` : `${origin}/v1/user/${kind === 'chains' ? 'used_chain_list' : 'token_list'}`;
+const balancePath = (origin: string, kind: 'chains' | 'tokens') => `${origin}/v1/user/${kind === 'chains' ? 'used_chain_list' : 'token_list'}`;
 
 export function parseChainIds(j: unknown): string[] {
   return [...new Set(listOf(j).flatMap((c) => (isObj(c) && str(c.id) ? [str(c.id)!] : [])))];
@@ -96,7 +88,7 @@ export function matchBalance(r: BalanceRow, q: string, chain = ''): boolean {
 
 export async function fetchBalances(ep: Endpoint, origin: string, address: string): Promise<Balances> {
   const headers: Record<string, string> = { accept: 'application/json' };
-  if (!viaWrapper(ep.url) && ep.authHeader && ep.apiKey) headers[ep.authHeader] = ep.apiKey;
+  if (ep.authHeader && ep.apiKey) headers[ep.authHeader] = ep.apiKey;
   const get = async (url: string) => limitedFetch(requestUrl(url), { headers });
   const id = encodeURIComponent(address);
   const res = await get(`${balancePath(origin, 'chains')}?id=${id}`);
