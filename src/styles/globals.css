@@ -152,6 +152,16 @@ th.num > [data-slot='button'] {
   padding-top: var(--space-2);
   padding-bottom: var(--space-2);
 }
+/* hover หัวตารางไม่มีพื้น ทั้งแถวและปุ่มเรียง (ผู้ใช้ 2026-10-02) — เหลือเปลี่ยนสีตัวอักษร + วงโฟกัสคีย์บอร์ด */
+[data-slot='table-header'] tr:hover,
+[data-slot='table-header'] tr:has([aria-expanded='true']),
+[data-slot='table-head'] > [data-slot='button']:hover,
+[data-slot='table-head'] > [data-slot='button'][aria-expanded='true'] {
+  background: transparent;
+}
+[data-slot='table-head'] > [data-slot='button']:hover {
+  color: var(--foreground);
+}
 .tx th > [data-slot='button'] {
   height: auto;
   padding-top: 0;
