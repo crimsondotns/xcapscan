@@ -92,6 +92,15 @@ th.num > [data-slot='button'] {
   .tx th:first-child > [data-slot='button'] {
     margin-left: -0.625rem;
   }
+  /* ตารางยอดคงเหลือ: มือถือเหลือ Token · Value (ซ่อน Amount/Price — จำนวนอยู่ใต้มูลค่าแทน) */
+  .tx.bal th:nth-child(3),
+  .tx.bal td:nth-child(3) {
+    display: none;
+  }
+  .tx.bal th:nth-child(4),
+  .tx.bal td:nth-child(4) {
+    display: table-cell;
+  }
   /* ตัวเลขสรุป: ไม่มี padding ซ้อนกับ gap ของกริด */
   .stat {
     padding: 0;

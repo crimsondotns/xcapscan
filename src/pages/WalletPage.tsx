@@ -14,6 +14,9 @@ import { FlowChart, RangeChips, Stat, type Range } from '../components/FlowChart
 import { useGroupLabel } from '../components/GroupNav';
 import { PageTabs } from '../components/PageTabs';
 import { TokenTable } from '../components/TokenTable';
+import { BalanceTable } from '../components/BalanceTable';
+import { useBalances } from '../balances';
+import { useStore } from '../store';
 import { TxTable } from '../components/TxTable';
 import { Identicon } from '../components/Identicon';
 import { Icon } from '../components/Icon';
@@ -57,6 +60,10 @@ export function WalletPage({
   const sums = useMemo(() => totals(ranged), [ranged]);
   const tokens = useMemo(() => tokenSummary(ranged), [ranged]);
   const pending = loading && rows.length === 0;
+  /* ยอดคงเหลือจริง (แหล่ง ERC-20) — โหลดเมื่อเปิดแท็บ Tokens; กระเป๋า Solana ใช้สรุปเข้า-ออกเดิม */
+  const { settings } = useStore();
+  const bal = useBalances(wallet, settings.endpoints, tab === 'tokens');
+  const balTotal = bal.data?.rows.reduce((s, r) => s + (r.usd ?? 0), 0) ?? null;
 
   // 👇👇👇 เพิ่ม useEffect นี้ 👇👇👇
   useEffect(() => {
@@ -106,18 +113,22 @@ export function WalletPage({
           <Stat label={t('flow.netShort', { n: range })} value={formatUsdExact(sums.net)} tone={signClassOf(sums.net)} loading={pending} />
           <Stat label={t('wallets.col.tx')} value={String(sums.count)} loading={pending} />
           <Stat label={t('flow.feeTotal')} value={formatUsdExact(sums.fee)} loading={pending} />
-          <Stat label={t('token.active')} value={String(tokens.length)} loading={pending} />
+          {bal.supported ? (
+            <Stat label={t('bal.total')} value={balTotal !== null ? formatUsdExact(balTotal) : '—'} loading={bal.loading && !bal.data} />
+          ) : (
+            <Stat label={t('token.active')} value={String(tokens.length)} loading={pending} />
+          )}
         </div>
         <FlowChart rows={ranged} days={range} height={200} loading={pending} />
         <PageTabs
           value={tab}
           onChange={setTab}
           tabs={[
-            { value: 'tokens', label: t('tab.tokens'), count: tokens.length },
+            { value: 'tokens', label: t('tab.tokens'), count: bal.supported ? (bal.data?.rows.length ?? 0) : tokens.length },
             { value: 'history', label: t('tab.history'), count: rows.length },
           ]}
         />
-        {tab === 'tokens' ? <TokenTable rows={ranged} chains={chains} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} bulk={bulk} />}
+        {tab === 'tokens' ? bal.supported ? <BalanceTable bal={bal} chains={chains} onToken={onToken} /> : <TokenTable rows={ranged} chains={chains} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} bulk={bulk} />}
       </section>
       <TagDialog open={tagsOpen} wallet={wallet} onClose={() => setTagsOpen(false)} />
     </>

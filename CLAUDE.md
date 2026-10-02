@@ -100,3 +100,9 @@ Do not declare work done while any of these is red.
 - ปุ่ม Slip ท้ายแผงขวา (คู่กับ View on explorer) → เปิดภาพสลิปแบบ **lightbox** (`SlipLightbox`: shadcn `Dialog` โปร่ง ภาพ 360px กลาง ปุ่มปิดมุมขวาบน ไม่มีแถบปุ่มใดๆ; Esc/คลิกม่านปิด) — ไม่สลับเนื้อหาแผง; ตรวจสลิปจากไอคอนโล่บนหัว (`#/v/<code>.<data>` เปิดไดอะล็อกตรวจ)
 - เมนูสลิป: เดสก์ท็อปคลิกขวา = `ContextMenu`; มือถือกดค้าง 500ms (หรือ contextmenu) = `Drawer` ล่างจอ รายการเดียวกัน (ผู้ใช้ 2026-10-01)
 - ตัวกรองขั้นสูงจำไว้ในเครื่อง (`xcap.scan.advFilter`, `loadAdv`/`saveAdv` ใน AdvancedFilter.tsx) — สลับกระเป๋า/รีโหลดแล้วยังกรองแบบเดิม ล้างได้จากชิป (ผู้ใช้ 2026-10-01)
+
+## Balance (ผู้ใช้ 2026-10-02)
+- แท็บ **Tokens** ในหน้ากระเป๋า = ยอดคงเหลือจริง (`src/balances.ts` + `components/BalanceTable.tsx`) เมื่อกระเป๋าเป็น ERC-20 และมีแหล่ง ERC-20 เปิดอยู่: ใช้ origin ของแหล่งตัวแรก (ไม่ฝัง host) → `<origin>/v1/user/used_chain_list?id={address}` แล้ว `<origin>/v1/user/token_list?id={address}&is_all=true&chain_id={chain}` ทีละเชนผ่าน `limitedFetch`; 429 หยุดทันทีแล้วแสดงผลบางส่วน + Alert
+- โหลดเมื่อเปิดแท็บ Tokens ครั้งแรกต่อกระเป๋า แคชในหน่วยความจำ ปุ่ม Reload balance ยิงใหม่; สถิติหัวกระเป๋าช่องที่ 4 = Balance (ผลรวม USD)
+- คอลัมน์ Token · Amount · Price · Value (เรียงตาม Value) มือถือเหลือ Token · Value (จำนวนใต้มูลค่า); Hide suspicious ซ่อนโทเคนที่ `is_verified === false`
+- กระเป๋า Solana / ไม่มีแหล่ง ERC-20 → แท็บ Tokens ยังเป็นสรุปเข้า-ออกจากประวัติ (`TokenTable`) เหมือนเดิม
