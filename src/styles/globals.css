@@ -169,6 +169,10 @@ th.num > [data-slot='button']:not(:last-child) {
 [data-slot='table-head'] > button[aria-expanded='true'] {
   background: transparent;
 }
+/* ปุ่มเรียง + กรวยในหัวคอลัมน์ จัดกึ่งกลางแนวตั้งเดียวกัน (ผู้ใช้ 2026-10-02) */
+[data-slot='table-head'] > button {
+  vertical-align: middle;
+}
 [data-slot='table-head'] > button:hover {
   color: var(--foreground);
 }
