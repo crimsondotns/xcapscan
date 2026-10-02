@@ -18,8 +18,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { RefreshCwIcon, SearchIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/components/ui/input-group';
-import { Dropdown } from './Dropdown';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { BAL_EMPTY, BalanceFilterButton, BalanceFilterChips, inUsdRange, type BalFilter } from './BalanceFilter';
 import { Logo } from './Logo';
 
 type SortKey = 'token' | 'amount' | 'price' | 'value';
@@ -29,28 +29,19 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
   const { settings, setHideScam } = useStore();
   const hideScam = settings.hideScam;
   const [q, setQ] = useState('');
-  const [chainSel, setChainSel] = useState('');
-  /* กรองมูลค่า USD (ผู้ใช้ 2026-10-02) — ว่าง = ไม่จำกัดฝั่งนั้น */
-  const [usdMin, setUsdMin] = useState('');
-  const [usdMax, setUsdMax] = useState('');
+  /* ปุ่ม Filters: เชน + ช่วงมูลค่า USD (ผู้ใช้ 2026-10-02) */
+  const [bf, setBf] = useState<BalFilter>(BAL_EMPTY);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'value', dir: -1 });
   const head = useStickyHead();
   const all = bal.data?.rows ?? [];
   const rows = useMemo(() => {
     const val = (r: BalanceRow) => (sort.key === 'token' ? r.symbol.toLowerCase() : sort.key === 'amount' ? r.amount : sort.key === 'price' ? (r.price ?? -1) : (r.usd ?? -1));
-    const num = (v: string) => {
-      const n = parseFloat(v.replace(/[,$\s]/g, ''));
-      return Number.isFinite(n) ? n : null;
-    };
-    const lo = num(usdMin);
-    const hi = num(usdMax);
-    const inRange = (r: BalanceRow) => (lo === null || (r.usd ?? 0) >= lo) && (hi === null || (r.usd ?? 0) <= hi);
-    return all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, chainSel) && inRange(r)).sort((a, b) => {
+    return all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, bf.chain) && inUsdRange(r.usd, bf)).sort((a, b) => {
       const x = val(a);
       const y = val(b);
       return (x > y ? 1 : x < y ? -1 : 0) * sort.dir;
     });
-  }, [all, hideScam, sort, q, chainSel, usdMin, usdMax]);
+  }, [all, hideScam, sort, q, bf]);
   /* เชนที่มีในยอด + จำนวนโทเคน — ตัวเลือกของ dropdown */
   const chainOpts = useMemo(() => {
     const n = new Map<string, number>();
@@ -96,32 +87,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
           </InputGroupAddon>
           <InputGroupInput id="bal-q" name="bq" type="search" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
         </InputGroup>
-        {/* ช่วงมูลค่า: placeholder Min/Max เป็นข้อยกเว้น Zero hints แบบเดียวกับตัวกรองขั้นสูง */}
-        <div className="flex items-center gap-1">
-          {(
-            [
-              ['min', usdMin, setUsdMin],
-              ['max', usdMax, setUsdMax],
-            ] as const
-          ).map(([k, v, set], i) => (
-            <InputGroup key={k} className="w-28">
-              <InputGroupAddon>
-                <InputGroupText>$</InputGroupText>
-              </InputGroupAddon>
-              <InputGroupInput
-                id={`bal-usd-${k}`}
-                aria-label={`${t('bal.col.value')} ${t(i ? 'af.max' : 'af.min')}`}
-                placeholder={t(i ? 'af.max' : 'af.min')}
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={v}
-                onChange={(e) => set(e.target.value)}
-              />
-            </InputGroup>
-          ))}
-        </div>
-        {chainOpts.length > 2 && <Dropdown value={chainSel} options={chainOpts} onChange={setChainSel} label={t('bal.allChains')} />}
+        <BalanceFilterButton value={bf} onChange={setBf} chains={chainOpts} countFor={(f) => all.filter((r) => (!hideScam || r.verified) && matchBalance(r, q, f.chain) && inUsdRange(r.usd, f)).length} />
         <Field orientation="horizontal" className="w-auto">
           <Switch id="bal-hide-scam" checked={hideScam} onCheckedChange={(v) => setHideScam(v)} />
           <FieldLabel htmlFor="bal-hide-scam" className="font-normal">
@@ -136,6 +102,7 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
           {t('token.count', { n: rows.length })} · {t('bal.total')} {formatUsdExact(total)}
         </span>
       </div>
+      <BalanceFilterChips value={bf} onChange={setBf} chainLabel={(id) => chainOpts.find((o) => o.value === id)?.label ?? id} />
       {(bal.data?.limited || bal.error) && (
         <Alert>
           <AlertDescription>{bal.error ? t('bal.error') : wait > 0 ? t('bal.partialWait', { s: wait }) : t('bal.partial')}</AlertDescription>
