@@ -266,6 +266,42 @@ function TokenSelect({ options, value, onChange }: { options: Array<{ symbol: st
   );
 }
 
+/** ช่วงวันที่ (ปุ่มลัด + กำหนดเอง) — ใช้ทั้งในแผง Filters และกรวยของคอลัมน์ Submitted */
+export function DateFields({ f, set, idp, cols = 1 }: { f: AdvFilter; set: (p: Partial<AdvFilter>) => void; idp: string; cols?: 1 | 2 }) {
+  const { t } = useI18n();
+  const toggle = <K extends 'date'>(k: K, opts: Array<[AdvFilter[K], string]>, extra?: (v: AdvFilter[K]) => Partial<AdvFilter>) => (
+    <ToggleGroup variant="outline" size="sm" className="flex-wrap" value={[f[k]]} onValueChange={(v: string[]) => v[0] && set({ [k]: v[0], ...(extra?.(v[0] as AdvFilter[K]) ?? {}) })} aria-label={t(`af.${k}`)}>
+      {opts.map(([v, l]) => (
+        <ToggleGroupItem key={v} value={v}>
+          {l}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+  return (
+  <FieldSet className="col-span-full gap-2">
+    <FieldLegend variant="label">{t('af.date')}</FieldLegend>
+    {toggle(
+      'date',
+      [
+        ['24h', t('af.preset.24h')],
+        ['7d', t('af.preset.7d')],
+        ['30d', t('af.preset.30d')],
+        ['all', t('af.preset.all')],
+        ['custom', t('af.preset.custom')],
+      ],
+      (v) => (v === 'custom' ? {} : { from: undefined, to: undefined }),
+    )}
+    {f.date === 'custom' && (
+      <div className={cols === 2 ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3'}>
+        <DateInput id={`${idp}-from`} label={t('af.from')} date={f.from} onChange={(d) => set({ from: d })} />
+        <DateInput id={`${idp}-to`} label={t('af.to')} date={f.to} onChange={(d) => set({ to: d })} />
+      </div>
+    )}
+  </FieldSet>
+  );
+}
+
 function Form({ f, set, tokens, cols, idp }: { f: AdvFilter; set: (p: Partial<AdvFilter>) => void; tokens: Array<{ symbol: string; count: number }>; cols: 1 | 2; idp: string }) {
   const { t } = useI18n();
   const toggle = <K extends 'dir' | 'status' | 'date'>(k: K, opts: Array<[AdvFilter[K], string]>, extra?: (v: AdvFilter[K]) => Partial<AdvFilter>) => (
@@ -287,26 +323,7 @@ function Form({ f, set, tokens, cols, idp }: { f: AdvFilter; set: (p: Partial<Ad
         <FieldLegend variant="label">{t('af.status')}</FieldLegend>
         {toggle('status', [['all', t('af.all')], ['ok', t('af.ok')], ['failed', t('af.failed')]])}
       </FieldSet>
-      <FieldSet className="col-span-full gap-2">
-        <FieldLegend variant="label">{t('af.date')}</FieldLegend>
-        {toggle(
-          'date',
-          [
-            ['24h', t('af.preset.24h')],
-            ['7d', t('af.preset.7d')],
-            ['30d', t('af.preset.30d')],
-            ['all', t('af.preset.all')],
-            ['custom', t('af.preset.custom')],
-          ],
-          (v) => (v === 'custom' ? {} : { from: undefined, to: undefined }),
-        )}
-        {f.date === 'custom' && (
-          <div className={cols === 2 ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3'}>
-            <DateInput id={`${idp}-from`} label={t('af.from')} date={f.from} onChange={(d) => set({ from: d })} />
-            <DateInput id={`${idp}-to`} label={t('af.to')} date={f.to} onChange={(d) => set({ to: d })} />
-          </div>
-        )}
-      </FieldSet>
+      <DateFields f={f} set={set} idp={idp} cols={cols} />
       <MoneyRange label={t('af.amount')} a="amtMin" b="amtMax" f={f} set={set} idp={idp} />
       <MoneyRange label={t('af.fee')} a="feeMin" b="feeMax" f={f} set={set} idp={idp} />
       <Field>
@@ -408,23 +425,31 @@ export function AdvancedFilterButton({ value, onChange, rows, countFor }: { valu
 }
 
 /** ชิปของตัวกรองที่ใช้อยู่ — กดกากบาทเอาออกทีละตัว */
-export function AdvancedFilterChips({ value, onChange }: { value: AdvFilter; onChange: (f: AdvFilter) => void }) {
+/** extra = ชิปของตัวกรองหัวคอลัมน์ [key, ข้อความ, เอาออก]; "Clear filters ×" นำหน้าเสมอ (ผู้ใช้ 2026-10-02) */
+export function AdvancedFilterChips({ value, onChange, extra = [], onClearExtra }: { value: AdvFilter; onChange: (f: AdvFilter) => void; extra?: Array<[string, string, () => void]>; onClearExtra?: () => void }) {
   const { t } = useI18n();
-  const list = useChips(value);
+  const list: Array<[string, string, () => void]> = [...extra, ...useChips(value).map(([k, l]): [string, string, () => void] => [k, l, () => onChange(clearKey(value, k))])];
   if (!list.length) return null;
+  const chip = (k: string, l: string, go: () => void, aria: string) => (
+    <Badge key={k} variant="secondary" className="h-7 gap-1 pr-1 pl-2.5">
+      {l}
+      <Button variant="ghost" size="icon-xs" aria-label={aria} onClick={go}>
+        <XIcon />
+      </Button>
+    </Badge>
+  );
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {list.map(([k, l]) => (
-        <Badge key={k} variant="secondary" className="h-7 gap-1 pr-1 pl-2.5">
-          {l}
-          <Button variant="ghost" size="icon-xs" aria-label={t('af.remove', { what: l })} onClick={() => onChange(clearKey(value, k))}>
-            <XIcon />
-          </Button>
-        </Badge>
-      ))}
-      <Button variant="link" size="sm" className="text-muted-foreground" onClick={() => onChange(ADV_EMPTY)}>
-        {t('af.clear')}
-      </Button>
+      {chip(
+        'clear',
+        t('af.clearFilters'),
+        () => {
+          onChange(ADV_EMPTY);
+          onClearExtra?.();
+        },
+        t('af.clearFilters'),
+      )}
+      {list.map(([k, l, go]) => chip(k, l, go, t('af.remove', { what: l })))}
     </div>
   );
 }

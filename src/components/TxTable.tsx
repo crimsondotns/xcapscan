@@ -14,11 +14,14 @@ import { Logo } from './Logo';
 import { chainOf, type ChainMap } from '../chains';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Field, FieldLabel } from '@/components/ui/field';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { SearchIcon } from 'lucide-react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { AdvancedFilterButton, loadAdv, saveAdv, AdvancedFilterChips, advFromTs, advMatches, type AdvFilter } from './AdvancedFilter';
+import { AdvancedFilterButton, loadAdv, saveAdv, AdvancedFilterChips, advFromTs, advMatches, DateFields, type AdvFilter } from './AdvancedFilter';
+import { TokenConds, passConds, liveConds, type TokenCond } from './BalanceFilter';
+import { HeadFilter } from './HeadFilter';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Spinner } from '@/components/ui/spinner';
 import type { OlderOpts } from '../useFeed';
 import { pausedFor } from '../limiter';
@@ -27,6 +30,14 @@ const TYPES: TxType[] = ['swap', 'send', 'receive', 'approve', 'contract'];
 /** ตัวกรองชนิด: 'transfer' = โอน นับทั้งส่งและรับในอันเดียว ('' = ทุกประเภท) */
 type TypeFilter = '' | 'transfer' | TxType;
 const matchesType = (r: TxRow, f: TypeFilter): boolean => (f === '' ? true : f === 'transfer' ? r.type === 'send' || r.type === 'receive' : r.type === f);
+/** คำค้นจับ hash / คู่ธุรกรรม / ชื่อธุรกรรม / สัญลักษณ์โทเคน (needle ตัวพิมพ์เล็กแล้ว) */
+const matchNeedle = (r: TxRow, needle: string): boolean => !needle || r.hash.toLowerCase().includes(needle) || (r.counterparty ?? '').toLowerCase().includes(needle) || (r.counterpartyName ?? '').toLowerCase().includes(needle) || r.name.toLowerCase().includes(needle) || r.moves.some((m) => m.symbol.toLowerCase().includes(needle));
+/** ตัวกรองของคอลัมน์ Type (กรวยในหัว จอ ≥640 — ผู้ใช้ 2026-10-02): เงื่อนไขค้นหาหลายแถว + ชนิด + เชน */
+interface TypeHead {
+  type: TypeFilter;
+  chain: string;
+  conds: TokenCond[];
+}
 type SortKey = 'type' | 'date' | 'amount' | 'fee';
 
 /**
@@ -69,6 +80,14 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   const [q, setQ] = useState('');
   const [chain, setChain] = useState('');
   const [type, setType] = useState<TypeFilter>('');
+  const [conds, setConds] = useState<TokenCond[]>([]);
+  const mobile = useIsMobile();
+  const typeHead: TypeHead = { type, chain, conds };
+  const setTypeHead = (v: TypeHead) => {
+    setType(v.type);
+    setChain(v.chain);
+    setConds(v.conds);
+  };
   const [adv, setAdv] = useState<AdvFilter>(loadAdv);
   useEffect(() => saveAdv(adv), [adv]);
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'date', dir: 'desc' });
@@ -82,29 +101,21 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   const PAGE = 25;
   const head = useStickyHead();
   /* ตัวกรองแถบเครื่องมือ (ไม่รวม advanced) — ใช้ทั้งกรองจริงและนับ "Show N results" ใน draft */
-  const base = (r: TxRow, needle: string) => {
+  const base = (r: TxRow, needle: string, h: TypeHead = typeHead) => {
     if (wallet && r.walletId !== wallet) return false;
-    if (chain && r.chain !== chain) return false;
-    if (!matchesType(r, type)) return false;
+    if (h.chain && r.chain !== h.chain) return false;
+    if (!matchesType(r, h.type)) return false;
     if (hideScam && r.flagged) return false;
-    if (!needle) return true;
-    return r.hash.toLowerCase().includes(needle) || (r.counterparty ?? '').toLowerCase().includes(needle) || (r.counterpartyName ?? '').toLowerCase().includes(needle) || r.name.toLowerCase().includes(needle) || r.moves.some((m) => m.symbol.toLowerCase().includes(needle));
+    if (!passConds(h.conds, (c) => matchNeedle(r, c.trim().toLowerCase()))) return false;
+    return matchNeedle(r, needle);
   };
-  const countFor = (f: AdvFilter) => {
+  const countFor = (f: AdvFilter, h: TypeHead = typeHead) => {
     const needle = q.trim().toLowerCase();
-    return rows.filter((r) => base(r, needle) && advMatches(r, f)).length;
+    return rows.filter((r) => base(r, needle, h) && advMatches(r, f)).length;
   };
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const list = rows.filter((r) => {
-      if (!advMatches(r, adv)) return false;
-      if (wallet && r.walletId !== wallet) return false;
-      if (chain && r.chain !== chain) return false;
-      if (!matchesType(r, type)) return false;
-      if (hideScam && r.flagged) return false;
-      if (!needle) return true;
-      return r.hash.toLowerCase().includes(needle) || (r.counterparty ?? '').toLowerCase().includes(needle) || (r.counterpartyName ?? '').toLowerCase().includes(needle) || r.name.toLowerCase().includes(needle) || r.moves.some((m) => m.symbol.toLowerCase().includes(needle));
-    });
+    const list = rows.filter((r) => advMatches(r, adv) && base(r, needle));
     const dir = sort.dir === 'asc' ? 1 : -1;
     const key = (r: TxRow): string | number => {
       switch (sort.key) {
@@ -126,7 +137,8 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
       const c = typeof ka === 'number' && typeof kb === 'number' ? ka - kb : String(ka).localeCompare(String(kb));
       return c * dir || b.time - a.time;
     });
-  }, [rows, q, wallet, chain, type, sort, labels, hideScam, adv]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, q, wallet, chain, type, conds, sort, labels, hideScam, adv]);
   /*
    * กรองวันที่ → ดึงประวัติจากแหล่งข้อมูลย้อนหลังเองจนถึงวันเริ่มของช่วง (แหล่งข้อมูลไม่มีพารามิเตอร์วันที่ — เลื่อนหน้าด้วย offset/cursor)
    * ครอบคลุมแล้ว (แถวเก่าสุด ≤ วันเริ่ม) หรือหมดหน้า → หยุด; ไม่เลื่อนหน้าเกินช่วงต่อจากตัวเลื่อนไม่รู้จบด้วย
@@ -181,12 +193,62 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   const rateLimited = fromTs !== null && !covered && (run.rate > 0 || (fetching && pauseLeft > 0));
   const fromLabel = fromTs === null ? '' : new Date(fromTs * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
-  const inf = useInfinite({ total: filtered.length, page: PAGE, hasMore: hasMore && !covered, loading, fetchMore: onMore, resetKey: `${wallet}|${q}|${chain}|${type}|${sort.key}${sort.dir}|${JSON.stringify(adv)}` });
+  const inf = useInfinite({ total: filtered.length, page: PAGE, hasMore: hasMore && !covered, loading, fetchMore: onMore, resetKey: `${wallet}|${q}|${chain}|${type}|${JSON.stringify(conds)}|${sort.key}${sort.dir}|${JSON.stringify(adv)}` });
   const shown = filtered.slice(0, inf.visible);
 
   function toggleSort(key: SortKey) {
     setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'type' ? 'asc' : 'desc' }));
   }
+
+  const chainOpts = [
+    { value: '', label: t('tx.allChains'), meta: scope.length },
+    ...chains.map((c) => {
+      const info = chainOf(chainInfo, c);
+      return {
+        value: c,
+        label: (
+          <span className="opt">
+            <Logo src={info?.logo ?? null} name={info?.name ?? c} size={18} />
+            {info?.name ?? c}
+          </span>
+        ),
+        meta: scope.filter((r) => r.chain === c).length,
+      };
+    }),
+  ];
+  const typeOpts = [{ value: '' as TypeFilter, label: t('tx.allTypes'), meta: scope.length }, { value: 'transfer' as TypeFilter, label: t('tx.typeTransfer'), meta: countType('transfer') }, ...TYPES.map((k) => ({ value: k as TypeFilter, label: t(`tx.type.${k}`), meta: countType(k) }))];
+  const chainName = (c: string) => chainOf(chainInfo, c)?.name ?? c;
+  const typeName = (v: TxType | 'transfer') => (v === 'transfer' ? t('tx.typeTransfer') : t(`tx.type.${v}`));
+  /* ชิปของกรวยหัวคอลัมน์ Type — แสดงรวมกับชิปของแผง Filters */
+  const headChips: Array<[string, string, () => void]> = [
+    ...conds.flatMap((c, i): Array<[string, string, () => void]> => (c.q.trim() ? [[`c${i}`, `${t('af.keyword')}: ${c.mode === 'exclude' ? `${t('af.exclude')} ` : ''}${c.q.trim()}`, () => setConds(conds.filter((_, j) => j !== i))]] : [])),
+    ...(type ? [['type', `${t('tx.col.type')}: ${typeName(type)}`, () => setType('')] as [string, string, () => void]] : []),
+    ...(chain ? [['chain', `${t('tx.col.chain')}: ${chainName(chain)}`, () => setChain('')] as [string, string, () => void]] : []),
+  ];
+  const headFilter = (k: SortKey, label: string) =>
+    mobile ? null : k === 'type' ? (
+      <HeadFilter<TypeHead> label={label} wide value={typeHead} onChange={setTypeHead} active={!!type || !!chain || liveConds(conds).length > 0} clear={() => ({ type: '', chain: '', conds: [] })} countFor={(d) => countFor(adv, d)}>
+        {(d, set) => (
+          <FieldGroup className="gap-4">
+            <TokenConds list={d.conds} onChange={(conds) => set({ conds })} idp="txc" legend={t('af.keyword')} addLabel={t('af.addCond')} />
+            <Field>
+              <FieldLabel>{t('tx.col.type')}</FieldLabel>
+              <Dropdown value={d.type} onChange={(type) => set({ type })} label={t('tx.col.type')} options={typeOpts} className="w-full" />
+            </Field>
+            {chains.length > 1 && (
+              <Field>
+                <FieldLabel>{t('tx.col.chain')}</FieldLabel>
+                <Dropdown value={d.chain} onChange={(chain) => set({ chain })} label={t('tx.col.chain')} options={chainOpts} className="w-full" />
+              </Field>
+            )}
+          </FieldGroup>
+        )}
+      </HeadFilter>
+    ) : k === 'date' ? (
+      <HeadFilter<AdvFilter> label={label} wide value={adv} onChange={setAdv} active={adv.date !== 'all'} clear={(d) => ({ ...d, date: 'all', from: undefined, to: undefined })} countFor={(d) => countFor(d)}>
+        {(d, set) => <DateFields f={d} set={set} idp="txd" />}
+      </HeadFilter>
+    ) : null;
 
   const Head = ({ k, label, num }: { k: SortKey; label: string; num?: boolean }) => (
     <TableHead scope="col" className={num ? 'num' : undefined} aria-sort={sort.key === k ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
@@ -194,44 +256,30 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
         {label}
         <Icon name={sort.key === k ? (sort.dir === 'asc' ? 'chevronUp' : 'chevronDown') : 'chevronsUpDown'} className="th-ico" />
       </Button>
+      {headFilter(k, label)}
     </TableHead>
   );
 
   return (
     <>
       <div className="toolbar" role="search">
-        <label className="sr-only" htmlFor="tx-q">
-          {t('tx.search')}
-        </label>
-        <InputGroup className="max-w-sm">
-          <InputGroupAddon>
-            <SearchIcon />
-          </InputGroupAddon>
-          <InputGroupInput id="tx-q" name="q" type="search" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
-        </InputGroup>
+        {mobile && (
+          <>
+            <label className="sr-only" htmlFor="tx-q">
+              {t('tx.search')}
+            </label>
+            <InputGroup className="max-w-sm">
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+              <InputGroupInput id="tx-q" name="q" type="search" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} />
+            </InputGroup>
+          </>
+        )}
         <Dropdown value={wallet} onChange={onWallet} label={t('tx.col.wallet')} options={[{ value: '', label: t('tx.allWallets') }, ...wallets.map((w) => ({ value: w.id, label: w.label }))]} />
-        <Dropdown
-          value={chain}
-          onChange={setChain}
-          label={t('tx.col.chain')}
-          options={[
-            { value: '', label: t('tx.allChains'), meta: scope.length },
-            ...chains.map((c) => {
-              const info = chainOf(chainInfo, c);
-              return {
-                value: c,
-                label: (
-                  <span className="opt">
-                    <Logo src={info?.logo ?? null} name={info?.name ?? c} size={18} />
-                    {info?.name ?? c}
-                  </span>
-                ),
-                meta: scope.filter((r) => r.chain === c).length,
-              };
-            }),
-          ]}
-        />
-        <Dropdown value={type} onChange={setType} label={t('tx.col.type')} options={[{ value: '' as TypeFilter, label: t('tx.allTypes'), meta: scope.length }, { value: 'transfer' as TypeFilter, label: t('tx.typeTransfer'), meta: countType('transfer') }, ...TYPES.map((k) => ({ value: k as TypeFilter, label: t(`tx.type.${k}`), meta: countType(k) }))]} />
+        {/* ค้นหา/เชน/ชนิด: มือถืออยู่บนแถบนี้; จอ ≥640 ย้ายเข้ากรวยของคอลัมน์ Type (ผู้ใช้ 2026-10-02) */}
+        {mobile && <Dropdown value={chain} onChange={setChain} label={t('tx.col.chain')} options={chainOpts} />}
+        {mobile && <Dropdown value={type} onChange={setType} label={t('tx.col.type')} options={typeOpts} />}
         <AdvancedFilterButton value={adv} onChange={setAdv} rows={scope} countFor={countFor} />
         <Field orientation="horizontal" className="w-auto">
           <Switch id="tx-hide-scam" checked={hideScam} onCheckedChange={(v) => setHideScam(v)} />
@@ -243,7 +291,12 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
           {t('tx.count', { n: filtered.length })}
         </span>
       </div>
-      <AdvancedFilterChips value={adv} onChange={setAdv} />
+      <AdvancedFilterChips
+        value={adv}
+        onChange={setAdv}
+        extra={headChips}
+        onClearExtra={() => setTypeHead({ type: '', chain: '', conds: [] })}
+      />
       {(fetching || capped || rateLimited) && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
           {fetching && !rateLimited ? (

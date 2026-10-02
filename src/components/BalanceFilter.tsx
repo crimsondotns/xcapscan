@@ -30,12 +30,16 @@ export const BAL_EMPTY: BalFilter = { chain: '', usdMin: '', usdMax: '', tokens:
 const BLANK: TokenCond = { q: '', mode: 'include' };
 const live = (l: TokenCond[]) => l.filter((c) => c.q.trim());
 
-/** แถวผ่านเงื่อนไขโทเคนไหม (แถวว่างไม่นับ) */
-export function inTokens(r: BalanceRow, list: TokenCond[]): boolean {
+/** ผ่านชุดเงื่อนไขไหม (แถวว่างไม่นับ): include ตรงอย่างน้อยหนึ่ง, exclude ห้ามตรง — test = ตัวจับของแต่ละตาราง */
+export function passConds(list: TokenCond[], test: (q: string) => boolean): boolean {
   const l = live(list);
   const inc = l.filter((c) => c.mode === 'include');
-  if (inc.length && !inc.some((c) => matchBalance(r, c.q))) return false;
-  return !l.some((c) => c.mode === 'exclude' && matchBalance(r, c.q));
+  if (inc.length && !inc.some((c) => test(c.q))) return false;
+  return !l.some((c) => c.mode === 'exclude' && test(c.q));
+}
+export const liveConds = live;
+export function inTokens(r: BalanceRow, list: TokenCond[]): boolean {
+  return passConds(list, (q) => matchBalance(r, q));
 }
 /** ทุกตัวกรองของตาราง Balance ยกเว้น Hide suspicious */
 export function passBal(r: BalanceRow, f: BalFilter): boolean {
@@ -56,8 +60,9 @@ export function inUsdRange(usd: number | null, f: BalFilter): boolean {
 }
 
 /** รายการเงื่อนไขโทเคน (ภาพอ้างอิงผู้ใช้ 2026-10-02): ช่องพิมพ์ · Include/Exclude · ถังขยะ, + Add token — ไม่มี placeholder (Zero hints) */
-function TokenConds({ list, onChange, idp }: { list: TokenCond[]; onChange: (l: TokenCond[]) => void; idp: string }) {
+export function TokenConds({ list, onChange, idp, legend, addLabel }: { list: TokenCond[]; onChange: (l: TokenCond[]) => void; idp: string; legend?: string; addLabel?: string }) {
   const { t } = useI18n();
+  const name = legend ?? t('af.token');
   const rows = list.length ? list : [BLANK];
   const put = (i: number, p: Partial<TokenCond>) => onChange(rows.map((c, j) => (j === i ? { ...c, ...p } : c)));
   const modes: Array<DropdownOption<TokenCond['mode']>> = [
@@ -66,19 +71,19 @@ function TokenConds({ list, onChange, idp }: { list: TokenCond[]; onChange: (l: 
   ];
   return (
     <FieldSet className="gap-2">
-      <FieldLegend variant="label">{t('af.token')}</FieldLegend>
+      <FieldLegend variant="label">{name}</FieldLegend>
       {rows.map((c, i) => (
         <div key={i} className="flex items-center gap-2">
-          <Input id={`${idp}-tq-${i}`} aria-label={`${t('af.token')} ${i + 1}`} type="text" autoComplete="off" spellCheck={false} className="min-w-0 flex-1" value={c.q} onChange={(e) => put(i, { q: e.target.value })} />
+          <Input id={`${idp}-tq-${i}`} aria-label={`${name} ${i + 1}`} type="text" autoComplete="off" spellCheck={false} className="min-w-0 flex-1" value={c.q} onChange={(e) => put(i, { q: e.target.value })} />
           <Dropdown value={c.mode} options={modes} onChange={(mode) => put(i, { mode })} label={t('af.include')} className="w-28 shrink-0" />
-          <Button type="button" variant="ghost" size="icon" aria-label={t('af.remove', { what: `${t('af.token')} ${i + 1}` })} disabled={rows.length === 1 && !c.q} onClick={() => onChange(rows.length === 1 ? [] : rows.filter((_, j) => j !== i))}>
+          <Button type="button" variant="ghost" size="icon" aria-label={t('af.remove', { what: `${name} ${i + 1}` })} disabled={rows.length === 1 && !c.q} onClick={() => onChange(rows.length === 1 ? [] : rows.filter((_, j) => j !== i))}>
             <Trash2Icon />
           </Button>
         </div>
       ))}
       <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => onChange([...rows, BLANK])}>
         <PlusIcon data-icon="inline-start" />
-        {t('af.addToken')}
+        {addLabel ?? t('af.addToken')}
       </Button>
     </FieldSet>
   );
