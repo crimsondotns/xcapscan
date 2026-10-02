@@ -57,7 +57,7 @@ export function RecentTable({ rows, wallets, chains, selected, onSelect, loading
         <p className="text-sm text-muted-foreground">{t('recent.empty')}</p>
       ) : (
         <div className="table-wrap wtab-wrap">
-          <Table containerClassName="max-sm:overflow-visible lg:overflow-visible" className="tx recent">
+          <Table containerClassName="overflow-visible" className="tx recent">
             <TableHeader ref={head.ref} data-stuck={head.stuck}>
               <TableRow>
                 <TableHead scope="col">{t('tx.col.type')}</TableHead>

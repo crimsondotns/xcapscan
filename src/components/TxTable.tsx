@@ -352,7 +352,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
         </div>
       ) : (
         <div className="table-wrap">
-          <Table containerClassName="max-sm:overflow-visible lg:overflow-visible" className="tx">
+          <Table containerClassName="overflow-visible" className="tx">
             <TableHeader ref={head.ref} data-stuck={head.stuck}>
               <TableRow>
                 <Head k="type" label={t('tx.col.type')} />

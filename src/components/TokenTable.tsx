@@ -50,7 +50,7 @@ export function TokenTable({ rows, chains, onToken, loading = false }: { rows: T
         </div>
       ) : (
         <div className="table-wrap">
-          <Table containerClassName="max-sm:overflow-visible lg:overflow-visible" className="tx">
+          <Table containerClassName="overflow-visible" className="tx">
             <TableHeader ref={head.ref} data-stuck={head.stuck}>
               <TableRow>
                 <TableHead scope="col">{t('tab.tokens')}</TableHead>
