@@ -19,9 +19,11 @@ export interface ChainInfo {
   logo: string | null;
   explorer: string | null;
   symbol: string | null;
+  /** chain id ตัวเลขของ EVM (เช่น 1, 56) — ใช้จับคู่กับรายการ RPC; ไม่มี = null */
+  evmId?: number | null;
 }
 
-const KEY = 'xcap.scan.chains.v1';
+const KEY = 'xcap.scan.chains.v2';
 const FAIL_KEY = 'xcap.scan.chains.fail';
 const FAIL_TTL = 60 * 60 * 1000;
 const TTL = 24 * 3600 * 1000;
@@ -40,6 +42,15 @@ const pick = (c: Dict, keys: string[], f: (v: unknown) => string | null): string
   }
   return null;
 };
+
+/** chain id ตัวเลข: community_id / network_id / chain_id หรือ chainId ที่เป็นตัวเลข */
+function evmIdOf(c: Dict): number | null {
+  for (const k of ['community_id', 'network_id', 'chain_id', 'chainId']) {
+    const v = typeof c[k] === 'string' ? Number(c[k]) : c[k];
+    if (typeof v === 'number' && Number.isInteger(v) && v > 0) return v;
+  }
+  return null;
+}
 
 /**
  * แปลงรายชื่อเชนให้เป็นรูปเดียว — รับได้ทั้งอาร์เรย์ตรงๆ และที่ห่อใน data / data.chains
@@ -61,6 +72,7 @@ export function normalize(body: unknown): ChainInfo[] {
       logo: pick(c, ['logo_url', 'svg_logo_url', 'logoURI', 'logo', 'icon', 'image'], https),
       explorer: pick(c, ['explorer_host', 'explorer', 'explorer_url', 'explorerUrl', 'browser', 'block_explorer', 'blockExplorer'], https) ?? fromList ?? null,
       symbol: pick(c, ['token_symbol', 'native_symbol', 'symbol', 'nativeSymbol'], str),
+      evmId: evmIdOf(c),
     });
   }
   return out;
@@ -161,7 +173,7 @@ export function useChains(settings: Settings): ChainMap {
     const m: ChainMap = new Map(map);
     for (const o of settings.chains) {
       const base = m.get(o.id);
-      m.set(o.id, { id: o.id, name: o.name || base?.name || o.id, logo: https(o.logo) ?? base?.logo ?? null, explorer: https(o.explorer) ?? base?.explorer ?? null, symbol: base?.symbol ?? null });
+      m.set(o.id, { id: o.id, name: o.name || base?.name || o.id, logo: https(o.logo) ?? base?.logo ?? null, explorer: https(o.explorer) ?? base?.explorer ?? null, symbol: base?.symbol ?? null, evmId: base?.evmId ?? null });
     }
     setMerged(m);
     // eslint-disable-next-line react-hooks/exhaustive-deps

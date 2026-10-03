@@ -243,8 +243,8 @@ async function run(url: string, init?: RequestInit): Promise<Response> {
 
 /** ยิงผ่านคิว; 429 → พักทั้งคิว + บีบท่อ แล้วคืน 429 ให้ผู้เรียกทันที (ไม่ยิงซ้ำเอง) */
 export async function limitedFetch(url: string, init?: RequestInit): Promise<Response> {
-  // มีแต่คำขออ่านอย่างเดียวในแอปนี้ คำขอที่ URL+header เหมือนกันจึงใช้ผลร่วมกันได้
-  const key = `${url}|${JSON.stringify(init?.headers ?? {})}`;
+  // มีแต่คำขออ่านอย่างเดียวในแอปนี้ คำขอที่ URL+header+body เหมือนกันจึงใช้ผลร่วมกันได้ (eth_call ของ RPC เป็น POST)
+  const key = `${url}|${JSON.stringify(init?.headers ?? {})}|${typeof init?.body === 'string' ? init.body : ''}`;
   const shared = inflight.get(key);
   if (shared) {
     const mine = shared.waiters++;

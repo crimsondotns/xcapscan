@@ -10,6 +10,7 @@
  *                                 "authHeader": "...", "apiKey": "...", "metaUrl": "..." }]
  *   VITE_CHAIN_LIST_URL  URL รายชื่อเชน
  *   VITE_CHAINS          JSON: [{ "id": "eth", "name": "Ethereum", "logo": "https://…", "explorer": "https://…" }]
+ *   VITE_RPC_LIST_URL    URL รายการ RPC สาธารณะ (ยอดคงเหลือ EVM ผ่าน Multicall3)
  */
 import type { ChainOverride, Endpoint, Family } from './store';
 
@@ -96,4 +97,9 @@ export function configuredChains(raw = env.VITE_CHAINS): ChainOverride[] {
 export function withConfiguredChains(user: ChainOverride[], fromConfig = configuredChains()): ChainOverride[] {
   const have = new Set(user.map((c) => c.id.toLowerCase()));
   return [...user, ...fromConfig.filter((c) => !have.has(c.id.toLowerCase()))];
+}
+
+/** URL รายการ RPC สาธารณะ (JSON: [{ chainId, rpc: [url | { url }] }]) — ใช้ดึงยอดคงเหลือ EVM แทนแหล่งเดิม (rpc.ts) */
+export function configuredRpcListUrl(raw = env.VITE_RPC_LIST_URL): string {
+  return str(raw) ?? '';
 }

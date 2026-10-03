@@ -84,6 +84,10 @@ Do not declare work done while any of these is red.
 - ต่อ host (ผู้ใช้ 2026-10-03 "ไม่อยากโดน 429"): แหล่งฟรียิงติดกันได้ ~7 แล้วบล็อกทั้ง host ~9 นาที → ถังโทเคนต่อ host ติดกัน 4 แล้วเติม 1/3 วิ (เกินรอคิว ไม่ยิง); โดน 429 → พัก host นั้น 10 นาที จำใน localStorage (`xcap:limiter:hostPause`) ระหว่างพักคืน 429 โดยไม่ยิงจริง host อื่นใช้ได้ปกติ; ยอดคงเหลือแคช localStorage 10 นาที (`xcap.scan.balances`)
 - ทุก fetch ผ่าน `limitedFetch` (`src/limiter.ts`): พร้อมกัน ≤2, เว้น 300ms, โดน 429 → พักทั้งคิว + บีบท่อเหลือ 1 (Retry-After หรือ 30s×2ⁿ ≤300s) แล้วคืน 429 ให้ผู้เรียกทันที **ไม่ยิงซ้ำเอง** — UI นับถอยหลังจาก `pausedFor()` ให้ผู้ใช้กดต่อ (ผู้ใช้ 2026-10-01) — ห้ามเรียก fetch ตรง
 
+## ยอดคงเหลือผ่าน RPC (ผู้ใช้ 2026-10-03)
+- `src/rpc.ts`: รายการ RPC สาธารณะจาก URL ตอน build (`VITE_RPC_LIST_URL` / secret `RPC_LIST_URL`, รูปแบบ `[{ chainId, rpc: [url|{url}] }]`, แคช 24 ชม. `xcap.scan.rpcs`, เก็บ ≤3 ตัว/เชน https ไม่มีตัวแปรกุญแจ) — ห้ามฝัง host
+- กระเป๋า EVM: ครั้งแรกใช้แหล่งเดิม (`token_list`) แล้วจด roster 24 ชม. (`xcap.scan.balroster`, มี `decimals`) → ครั้งต่อไป/Reload balance ถามจำนวนใหม่ผ่าน Multicall3 `aggregate3` (balanceOf + getEthBalance) ทุกเชนพร้อมกัน ราคาใช้ของ roster; จับคู่เชนด้วย `evmId` จาก chain list (`community_id`/`network_id`/`chain_id`); เชนที่ไม่มี RPC/ล้มทุกตัว → `token_list` ของแหล่งเดิมเฉพาะเชนนั้น; ประวัติธุรกรรมยังใช้แหล่งเดิม (RPC ไม่มีดัชนีประวัติ)
+
 ## CORS / proxy (2026-09-22)
 - ทุก fetch ไปแหล่งข้อมูล (history / metadata / price / chain list) ผ่าน `proxied()` ใน `src/proxy.ts`: ผู้ใช้ตั้ง **Proxy URL** ใน Settings (`{url}` หรือ prefix) → ใช้; ไม่ตั้ง + dev → `/__proxy?url=` ของ vite (plugin `devProxy` ใน vite.config.ts ส่งต่อ header ยกเว้น host/origin/referer/cookie); production static → ยิงตรง (ต้องเป็นแหล่งที่เปิด CORS หรือผู้ใช้มี proxy เอง)
 

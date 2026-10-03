@@ -63,7 +63,7 @@ export function WalletPage({
   const pending = loading && rows.length === 0;
   /* ยอดคงเหลือจริง (แหล่งตระกูลเดียวกับกระเป๋า) — โหลดเมื่อเปิดแท็บ Tokens; ไม่มีแหล่ง = สรุปเข้า-ออกเดิม */
   const { settings } = useStore();
-  const bal = useBalances(wallet, settings.endpoints, tab === 'tokens');
+  const bal = useBalances(wallet, settings.endpoints, tab === 'tokens', chains);
   const balTotal = bal.data?.rows.reduce((s, r) => s + (r.usd ?? 0), 0) ?? null;
 
   /* ยิงเฉพาะของแท็บที่เปิด (ผู้ใช้ 2026-10-03): Tokens ที่มีแหล่งยอดคงเหลือ = balance อย่างเดียว;

@@ -6,7 +6,7 @@
  * กระเป๋า Solana (ผู้ใช้ 2026-10-02): origin ของแหล่ง Solana ตัวแรก → <origin>/v1/pnl-positions?address={address}&filter=recentlyActive
  *   → tokenPositions[] (balance, balanceValue) ชื่อ/สัญลักษณ์/โลโก้เติมจาก metaUrl ของแหล่ง (tokens.ts)
  * ทุกคำขอผ่าน limitedFetch; เจอ 429 หยุดทันที คืนเท่าที่ได้ (limited) — limiter พักคิวให้แล้ว
- * แคชในหน่วยความจำต่อกระเป๋า (ยอดเปลี่ยนบ่อย ไม่เขียน localStorage)
+ * แคชยอด 10 นาที (หน่วยความจำ + localStorage); หลังจากนั้นกระเป๋า EVM รีเฟรชจำนวนผ่าน RPC สาธารณะ (rpc.ts) ไม่ยิงแหล่งเดิม
  */
 import { useCallback, useEffect, useState } from 'react';
 import { limitedFetch } from './limiter';
@@ -14,6 +14,9 @@ import { requestUrl } from './proxy';
 import { ensureTokenMeta } from './tokens';
 import { rememberPrice } from './prices';
 import type { Endpoint, Wallet } from './store';
+import { chainOf, type ChainMap } from './chains';
+import { configuredRpcListUrl } from './config';
+import { balanceOfCall, chainBalances, nativeCall, rpcList, type RpcMap } from './rpc';
 
 export interface BalanceRow {
   chain: string;
@@ -27,6 +30,8 @@ export interface BalanceRow {
   verified: boolean;
   /** จำนวนแบบทศนิยมครบทุกหลัก (สตริง ไม่ผ่าน float) — จาก raw_amount ÷ 10^decimals หรือข้อความตัวเลขดิบใน JSON; ไม่มี = null */
   exact?: string | null;
+  /** ทศนิยมของโทเคน — มีเมื่อแหล่งส่งมา ใช้แปลงจำนวนดิบจาก RPC (rpc.ts) */
+  decimals?: number;
 }
 
 export interface Balances {
@@ -115,6 +120,7 @@ export function parseTokenList(j: unknown, chain: string): BalanceRow[] {
       price,
       usd: price !== null ? amount * price : null,
       verified: t.is_verified !== false,
+      ...(dec !== null && Number.isInteger(dec) ? { decimals: dec } : {}),
     });
   }
   return out;
@@ -195,6 +201,96 @@ export async function fetchBalances(ep: Endpoint, origin: string, address: strin
   return { rows: byUsd(rows), limited, at: Date.now() };
 }
 
+/* ---------- รีเฟรชผ่าน RPC (ผู้ใช้ 2026-10-03) ---------- */
+
+/** รายชื่อโทเคนจากแหล่งเดิมครั้งล่าสุดต่อกระเป๋า — 24 ชม.; หมดอายุแล้วค่อยถามแหล่งเดิมใหม่ (เผื่อมีโทเคนใหม่) */
+const LS_ROSTER = 'xcap.scan.balroster';
+const ROSTER_TTL = 24 * 3600_000;
+export const roster = {
+  get(k: string): Balances | null {
+    try {
+      const hit = (JSON.parse(localStorage.getItem(LS_ROSTER) ?? '{}') as Record<string, Balances>)[k];
+      return hit && Date.now() - hit.at < ROSTER_TTL ? hit : null;
+    } catch {
+      return null;
+    }
+  },
+  set(k: string, b: Balances): void {
+    if (b.limited) return;
+    try {
+      const all = JSON.parse(localStorage.getItem(LS_ROSTER) ?? '{}') as Record<string, Balances>;
+      const now = Date.now();
+      for (const key of Object.keys(all)) if (now - all[key]!.at >= ROSTER_TTL) delete all[key];
+      all[k] = b;
+      localStorage.setItem(LS_ROSTER, JSON.stringify(all));
+    } catch {
+      /* เต็ม/ถูกบล็อก */
+    }
+  },
+};
+
+const isEvmToken = (id: string) => /^0x[0-9a-f]{40}$/i.test(id);
+
+/**
+ * จำนวนใหม่ของทุกแถวใน roster ผ่าน RPC — ราคาใช้ของเดิม (ภายใน 24 ชม.)
+ * เชนที่ไม่มี RPC / ไม่รู้ chain id / แถวไม่มี decimals / RPC ล้มทุกตัว → อยู่ใน missing ให้ผู้เรียกถามแหล่งเดิมเฉพาะเชนนั้น
+ */
+export async function refreshViaRpc(rows: BalanceRow[], address: string, chains: ChainMap, rpcs: RpcMap, onPartial?: (rows: BalanceRow[]) => void): Promise<{ rows: BalanceRow[]; missing: string[] }> {
+  const byChain = new Map<string, BalanceRow[]>();
+  for (const r of rows) byChain.set(r.chain, [...(byChain.get(r.chain) ?? []), r]);
+  const out: BalanceRow[] = [];
+  const missing: string[] = [];
+  await Promise.all(
+    [...byChain].map(async ([chain, list]) => {
+      const id = chainOf(chains, chain)?.evmId;
+      const urls = id ? rpcs.get(id) : undefined;
+      if (!urls || list.some((r) => r.decimals === undefined)) return void missing.push(chain);
+      const raws = await chainBalances(urls, list.map((r) => (isEvmToken(r.tokenId) ? balanceOfCall(r.tokenId, address) : nativeCall(address))));
+      if (!raws) return void missing.push(chain);
+      list.forEach((r, i) => {
+        const exact = raws[i] !== null ? fromRaw(raws[i]!, r.decimals!) : null;
+        if (exact === null) return void out.push(r); // call เดียวล้ม → คงค่าเดิม
+        const amount = Number(exact);
+        if (!amount) return; // ขายหมดแล้ว
+        out.push({ ...r, exact, amount, usd: r.price !== null ? amount * r.price : null });
+      });
+      onPartial?.(byUsd(out));
+    })
+  );
+  return { rows: byUsd(out), missing };
+}
+
+/** token_list ของเชนที่ RPC ช่วยไม่ได้ — 429 หยุดทันที */
+async function fetchChainsFromSource(ep: Endpoint, origin: string, address: string, chainIds: string[]): Promise<{ rows: BalanceRow[]; limited: boolean }> {
+  const headers: Record<string, string> = { accept: 'application/json' };
+  if (ep.authHeader && ep.apiKey) headers[ep.authHeader] = ep.apiKey;
+  const rows: BalanceRow[] = [];
+  for (const c of chainIds) {
+    const r = await limitedFetch(requestUrl(`${balancePath(origin, 'tokens')}?id=${encodeURIComponent(address)}&is_all=true&chain_id=${encodeURIComponent(c)}`), { headers });
+    if (r.status === 429) return { rows, limited: true };
+    if (r.ok) rows.push(...parseTokenList(parseJsonExact(await r.text()), c));
+  }
+  return { rows, limited: false };
+}
+
+/**
+ * ยอดของกระเป๋า: มี roster (ภายใน 24 ชม.) + รายการ RPC → ถาม RPC ก่อน เชนที่เหลือถามแหล่งเดิม
+ * ไม่มี roster / Solana / ไม่ได้ตั้ง RPC → แหล่งเดิมทั้งหมด แล้วจด roster
+ */
+export async function loadBalances(ep: Endpoint, origin: string, wallet: Pick<Wallet, 'address' | 'family'>, key: string, chains: ChainMap, onPartial?: (b: Balances) => void): Promise<Balances> {
+  const base = wallet.family === 'erc20' ? roster.get(key) : null;
+  const rpcs = base ? await rpcList() : null;
+  if (base && rpcs) {
+    const got = await refreshViaRpc(base.rows, wallet.address, chains, rpcs, (rows) => onPartial?.({ rows, limited: false, at: Date.now() }));
+    if (!got.missing.length) return { rows: got.rows, limited: false, at: Date.now() };
+    const src = await fetchChainsFromSource(ep, origin, wallet.address, got.missing);
+    return { rows: byUsd([...got.rows, ...src.rows]), limited: src.limited, at: Date.now() };
+  }
+  const b = await fetchBalances(ep, origin, wallet.address, onPartial);
+  if (wallet.family === 'erc20') roster.set(key, b);
+  return b;
+}
+
 /**
  * ราคาจากยอดคงเหลือ = ราคาปัจจุบัน → ส่งเข้าแคชราคา (เวลา = ตอนนี้) ให้แผงรายละเอียดใช้ราคาล่าสุดจริง
  * เหรียญหลักของเชน (id ไม่ใช่ที่อยู่ เช่น eth/op หรือ SOL บน Solana) เก็บซ้ำแบบไม่มี tokenId ให้ตรงคีย์ที่ priceOf ค้นด้วยสัญลักษณ์
@@ -255,21 +351,30 @@ export interface BalanceState {
 }
 
 /** โหลดยอดเมื่อ active เป็นจริงครั้งแรกต่อกระเป๋า (แท็บ Tokens เปิดอยู่); reload = ยิงใหม่ */
-export function useBalances(wallet: Wallet, endpoints: Endpoint[], active: boolean): BalanceState {
+export function useBalances(wallet: Wallet, endpoints: Endpoint[], active: boolean, chains: ChainMap = new Map()): BalanceState {
   const src = balanceSource(endpoints, wallet);
   const key = src ? `${src.origin}|${(wallet.family === 'sol' ? wallet.address : wallet.address.toLowerCase())}` : '';
   const [data, setData] = useState<Balances | null>(() => cache.get(key) ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [nonce, setNonce] = useState(0);
+  /* รายชื่อเชนโหลดแบบ async — ถ้าจะใช้ RPC ต้องรู้ chain id ก่อน; รอได้ไม่เกิน 1.5 วิ แล้วค่อยไปแหล่งเดิม */
+  const [waited, setWaited] = useState(false);
+  const needChains = chains.size === 0 && wallet.family === 'erc20' && configuredRpcListUrl() !== '' && roster.get(key) !== null;
+  useEffect(() => {
+    if (!needChains) return;
+    const t = setTimeout(() => setWaited(true), 1500);
+    return () => clearTimeout(t);
+  }, [needChains]);
   useEffect(() => setData(cache.get(key) ?? null), [key]);
   useEffect(() => {
     if (!src || !active) return;
     if (nonce === 0 && cache.has(key)) return;
+    if (needChains && !waited) return;
     let live = true;
     setLoading(true);
     setError(false);
-    fetchBalances(src.ep, src.origin, wallet.address, (b) => live && setData(b))
+    loadBalances(src.ep, src.origin, wallet, key, chains, (b) => live && setData(b))
       .then((b) => {
         cache.set(key, b);
         rememberBalancePrices(b.rows);
@@ -281,7 +386,7 @@ export function useBalances(wallet: Wallet, endpoints: Endpoint[], active: boole
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, active, nonce]);
+  }, [key, active, nonce, needChains && !waited]);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   return { supported: src !== null, data, loading, error, reload };
 }

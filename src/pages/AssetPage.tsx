@@ -36,7 +36,7 @@ export function AssetPage({ onEnsure, tokenKey, wallet, all, rows, chains, group
   const groupLabel = useGroupLabel(all, group);
   const { settings } = useStore();
   /* ยอดคงเหลือของกระเป๋านี้ — ได้จากแคชถ้าเคยเปิดแท็บ Tokens; ไม่มีกระเป๋า = ไม่ยิง */
-  const bal = useBalances(wallet ?? NO_WALLET, settings.endpoints, !!wallet);
+  const bal = useBalances(wallet ?? NO_WALLET, settings.endpoints, !!wallet, chains);
   /* path พก token address (ผู้ใช้ 2026-10-02) หรือ symbol (ลิงก์เก่า/จากชื่อในตาราง) — หา symbol + เชนจากยอด แล้วจากประวัติ */
   const k = tokenKey.toLowerCase();
   const balHit = bal.data?.rows.find((r) => r.tokenId.toLowerCase() === k) ?? null;
