@@ -5,7 +5,6 @@ import { formatAmount, formatPrice, formatUsdExact } from '../format';
 import { useI18n } from '../i18n';
 import { useStore } from '../store';
 import { chainOf, type ChainMap } from '../chains';
-import { pausedFor } from '../limiter';
 import { TokenLogo } from './Logo';
 import { Icon } from './Icon';
 import { SkeletonRows } from './Skeleton';
@@ -64,7 +63,6 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
     ];
   }, [all, chains, t]);
   const total = rows.reduce((s, r) => s + (r.usd ?? 0), 0);
-  const wait = Math.ceil(pausedFor() / 1000);
 
   const countFor = (f: BalFilter) => all.filter((r) => (!hideScam || r.verified) && passBal(r, f)).length;
   /* Token กินที่เหลือ · ตัวเลข 3 คอลัมน์กว้างเท่ากัน 18% (ผู้ใช้ 2026-10-02) */
@@ -99,9 +97,10 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
         </span>
       </div>
       <BalanceFilterChips value={bf} onChange={setBf} chainLabel={(id) => chainOpts.find((o) => o.value === id)?.label ?? id} />
-      {(bal.data?.limited || bal.error) && (
+      {/* ถูกจำกัดคำขอ → ไม่แจ้ง ไม่นับถอยหลัง ใช้ยอดล่าสุดของเชนนั้นแทน (ผู้ใช้ 2026-10-03) */}
+      {bal.error && (
         <Alert>
-          <AlertDescription>{bal.error ? t('bal.error') : wait > 0 ? t('bal.partialWait', { s: wait }) : t('bal.partial')}</AlertDescription>
+          <AlertDescription>{t('bal.error')}</AlertDescription>
         </Alert>
       )}
       {!bal.loading && rows.length === 0 && bal.data ? (

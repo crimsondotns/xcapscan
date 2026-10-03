@@ -9,7 +9,7 @@
  * แคชยอด 10 นาที (หน่วยความจำ + localStorage); หลังจากนั้นกระเป๋า EVM รีเฟรชจำนวนผ่าน RPC สาธารณะ (rpc.ts) ไม่ยิงแหล่งเดิม
  */
 import { useCallback, useEffect, useState } from 'react';
-import { limitedFetch } from './limiter';
+import { hostOf, hostPausedFor, limitedFetch } from './limiter';
 import { requestUrl } from './proxy';
 import { ensureTokenMeta } from './tokens';
 import { rememberPrice } from './prices';
@@ -207,10 +207,11 @@ export async function fetchBalances(ep: Endpoint, origin: string, address: strin
 const LS_ROSTER = 'xcap.scan.balroster';
 const ROSTER_TTL = 24 * 3600_000;
 export const roster = {
-  get(k: string): Balances | null {
+  /** anyAge = รับของหมดอายุด้วย (ใช้เติมเชนที่โหลดไม่ได้) */
+  get(k: string, anyAge = false): Balances | null {
     try {
       const hit = (JSON.parse(localStorage.getItem(LS_ROSTER) ?? '{}') as Record<string, Balances>)[k];
-      return hit && Date.now() - hit.at < ROSTER_TTL ? hit : null;
+      return hit && (anyAge || Date.now() - hit.at < ROSTER_TTL) ? hit : null;
     } catch {
       return null;
     }
@@ -220,7 +221,7 @@ export const roster = {
     try {
       const all = JSON.parse(localStorage.getItem(LS_ROSTER) ?? '{}') as Record<string, Balances>;
       const now = Date.now();
-      for (const key of Object.keys(all)) if (now - all[key]!.at >= ROSTER_TTL) delete all[key];
+      for (const key of Object.keys(all)) if (now - all[key]!.at >= 7 * ROSTER_TTL) delete all[key];
       all[k] = b;
       localStorage.setItem(LS_ROSTER, JSON.stringify(all));
     } catch {
@@ -260,6 +261,12 @@ export async function refreshViaRpc(rows: BalanceRow[], address: string, chains:
   return { rows: byUsd(out), missing };
 }
 
+/** เติมแถวของเชนที่ไม่มีผลใหม่ด้วยแถวเดิม */
+function withStale(fresh: BalanceRow[], old: BalanceRow[]): BalanceRow[] {
+  const have = new Set(fresh.map((r) => r.chain));
+  return byUsd([...fresh, ...old.filter((r) => !have.has(r.chain))]);
+}
+
 /** token_list ของเชนที่ RPC ช่วยไม่ได้ — 429 หยุดทันที */
 async function fetchChainsFromSource(ep: Endpoint, origin: string, address: string, chainIds: string[]): Promise<{ rows: BalanceRow[]; limited: boolean }> {
   const headers: Record<string, string> = { accept: 'application/json' };
@@ -278,17 +285,26 @@ async function fetchChainsFromSource(ep: Endpoint, origin: string, address: stri
  * ไม่มี roster / Solana / ไม่ได้ตั้ง RPC → แหล่งเดิมทั้งหมด แล้วจด roster
  */
 export async function loadBalances(ep: Endpoint, origin: string, wallet: Pick<Wallet, 'address' | 'family'>, key: string, chains: ChainMap, onPartial?: (b: Balances) => void): Promise<Balances> {
-  const base = wallet.family === 'erc20' ? roster.get(key) : null;
+  /* แหล่งเดิมยังถูกพัก → ใช้รายชื่อโทเคนเก่าแม้หมดอายุ ดีกว่ายิงไปโดน 429 */
+  const paused = hostPausedFor(hostOf(origin)) > 0;
+  const base = wallet.family === 'erc20' ? roster.get(key, paused) : null;
   const rpcs = base ? await rpcList() : null;
   if (base && rpcs) {
     const got = await refreshViaRpc(base.rows, wallet.address, chains, rpcs, (rows) => onPartial?.({ rows, limited: false, at: Date.now() }));
     if (!got.missing.length) return { rows: got.rows, limited: false, at: Date.now() };
     const src = await fetchChainsFromSource(ep, origin, wallet.address, got.missing);
-    return { rows: byUsd([...got.rows, ...src.rows]), limited: src.limited, at: Date.now() };
+    return { rows: withStale([...got.rows, ...src.rows], base.rows), limited: false, at: Date.now() };
   }
   const b = await fetchBalances(ep, origin, wallet.address, onPartial);
-  if (wallet.family === 'erc20') roster.set(key, b);
-  return b;
+  if (!b.limited) {
+    if (wallet.family === 'erc20') roster.set(key, b);
+    return b;
+  }
+  /* ถูกจำกัดคำขอ → เชนที่ไม่ได้ใช้ยอดล่าสุดที่เคยได้ (roster/แคช) ไม่แสดงครึ่งๆ และไม่บล็อก (ผู้ใช้ 2026-10-03) */
+  const prev = roster.get(key, true)?.rows ?? cache.mem.get(key)?.rows ?? [];
+  const rows = withStale(b.rows, prev);
+  if (wallet.family === 'erc20' && rows.length) roster.set(key, { rows, limited: false, at: roster.get(key, true)?.at ?? Date.now() });
+  return { rows, limited: false, at: Date.now() };
 }
 
 /**
