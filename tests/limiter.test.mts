@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { backoff, limitedFetch, pausedFor, setLimiterTiming } from '../src/limiter.ts';
+import { backoff, hostOf, hostPausedFor, limitedFetch, pausedFor, setLimiterTiming } from '../src/limiter.ts';
 
-setLimiterTiming({ gapMs: 1, basePauseMs: 10 });
+setLimiterTiming({ gapMs: 1, basePauseMs: 10, hostRefillMs: 1 });
 
 /** Response ปลอมแบบย่อ — ต้องมี clone() เพราะคิวแจกผลให้ผู้เรียกหลายคน */
 const fake = (status: number, retryAfter: string | null = null) => {
@@ -73,7 +73,8 @@ test('โดน 429 แล้วบีบท่อ: เหลือทีละ 
     inFlight--;
     return fake(200);
   };
-  await Promise.all(Array.from({ length: 4 }, (_, i) => limitedFetch(`https://x.invalid/after-${i}`)));
+  // host ที่โดน 429 ถูกพักแยก — ดูการบีบท่อรวมจาก host อื่น
+  await Promise.all(Array.from({ length: 4 }, (_, i) => limitedFetch(`https://y.invalid/after-${i}`)));
   assert.equal(peak, 1, 'หลังโดนแบน ยิงทีละคำขอเท่านั้น');
 });
 
@@ -83,4 +84,39 @@ test('Retry-After ที่แหล่งส่งมา ถูกใช้ก�
   assert.equal(ms, 2000);
   assert.ok(pausedFor() > 1500, `คิวต้องถูกพักไว้จริง แต่ได้ ${pausedFor()}ms`);
   setLimiterTiming({ reset: true });
+});
+
+test('host ที่โดน 429 ถูกพัก: คำขอถัดไปคืน 429 ทันทีโดยไม่ยิงจริง (ไม่ต่ออายุบล็อก) ส่วน host อื่นยังใช้ได้', async () => {
+  setLimiterTiming({ reset: true, basePauseMs: 1, hostPauseMs: 60_000 });
+  let calls = 0;
+  (globalThis as { fetch: unknown }).fetch = async (u: string) => {
+    calls++;
+    return fake(u.includes('banned.invalid') ? 429 : 200);
+  };
+  assert.equal((await limitedFetch('https://banned.invalid/a')).status, 429);
+  assert.ok(hostPausedFor('banned.invalid') > 50_000, 'พักอย่างน้อยเท่าเวลาบล็อก');
+  const again = await limitedFetch('https://banned.invalid/b');
+  assert.equal(again.status, 429);
+  assert.equal(calls, 1, 'ระหว่างพักไม่ยิงออกไปเลย');
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal((await limitedFetch('https://ok.invalid/c')).status, 200, 'host อื่นไม่โดนลากไปด้วย');
+  setLimiterTiming({ reset: true, basePauseMs: 10, hostPauseMs: 10 * 60_000 });
+});
+
+test('ถังต่อ host: ยิงติดกันได้ตาม burst แล้วที่เหลือรอเติม ไม่ยิงเกินโควตา', async () => {
+  setLimiterTiming({ reset: true, hostBurst: 2, hostRefillMs: 40 });
+  const at: number[] = [];
+  (globalThis as { fetch: unknown }).fetch = async () => {
+    at.push(Date.now());
+    return fake(200);
+  };
+  const t0 = Date.now();
+  await Promise.all(Array.from({ length: 4 }, (_, i) => limitedFetch(`https://bucket.invalid/${i}`)));
+  assert.ok(at[3]! - t0 >= 70, 'คำขอที่ 3–4 ต้องรอเติมถัง');
+  setLimiterTiming({ reset: true, hostBurst: 4, hostRefillMs: 1 });
+});
+
+test('host ของ URL ที่ห่อด้วย proxy คือ host ข้างใน', () => {
+  assert.equal(hostOf('/xcapscan/__proxy?url=https%3A%2F%2Fapi.example.invalid%2Fv1%2Fx'), 'api.example.invalid');
+  assert.equal(hostOf('https://api.example.invalid/v1/x?id=1'), 'api.example.invalid');
 });

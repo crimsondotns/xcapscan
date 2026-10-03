@@ -10,6 +10,10 @@ import { fallbackProxy } from './proxy';
  * - ไม่ยิงซ้ำเอง (ผู้ใช้ 2026-10-01): คืน 429 ให้ผู้เรียกทันที — ยิงซ้ำตอนโดนแบนคือต่ออายุแบน;
  *   UI โชว์เวลานับถอยหลังจาก pausedFor() แล้วให้ผู้ใช้กดโหลดต่อเอง
  * - ซิงก์เวลาพักข้ามแท็บผ่าน localStorage — เปิดแท็บใหม่ระหว่างที่แท็บอื่นพักอยู่ จะไม่ยิงซ้ำ
+ * - ต่อ host (ผู้ใช้ 2026-10-03 "ไม่อยากโดน 429 เลย"): แหล่งฟรียอมให้ยิงติดกันราว 7 คำขอแล้วบล็อกทั้ง host ~9 นาที
+ *   → ถังโทเคนต่อ host: ติดกันได้ HOST_BURST คำขอ แล้วเติม 1 ทุก HOST_REFILL_MS (คำขอที่เกินรอคิว ไม่ยิงออกไป)
+ *   → ถ้ายังโดน 429: พัก host นั้น HOST_PAUSE_MS (≥ เวลาบล็อกจริง) จำข้ามรีเฟรช ระหว่างพักคืน 429 ทันทีโดยไม่ยิงจริง
+ *     (ไม่ต่ออายุบล็อก) — host อื่นยังใช้ได้ตามปกติ
  */
 const MAX_CONCURRENCY = 2;
 /** สำเร็จติดกันกี่ครั้งถึงคลายท่อขึ้นหนึ่งขั้น */
@@ -18,6 +22,10 @@ let GAP_MS = 500;
 let BASE_PAUSE_MS = 30000;
 const MAX_PAUSE_MS = 300000;
 const MAX_GAP_FACTOR = 8;
+let HOST_BURST = 4;
+let HOST_REFILL_MS = 3000;
+let HOST_PAUSE_MS = 10 * 60_000;
+const LS_HOST_KEY = 'xcap:limiter:hostPause';
 
 /** คีย์ใน localStorage สำหรับซิงก์เวลาพักข้ามแท็บ (ทุกแท็บในเบราว์เซอร์เดียวกันใช้เน็ตเดียวกัน) */
 const LS_PAUSE_KEY = 'xcap:limiter:pausedUntil';
@@ -68,10 +76,16 @@ function clearPausedUntil(): void {
 }
 
 /** เทสต์เท่านั้น: ย่นเวลารอ และคืนค่าสภาพท่อให้เริ่มใหม่สะอาดๆ */
-export function setLimiterTiming(t: { gapMs?: number; basePauseMs?: number; reset?: boolean }): void {
+export function setLimiterTiming(t: { gapMs?: number; basePauseMs?: number; reset?: boolean; hostBurst?: number; hostRefillMs?: number; hostPauseMs?: number }): void {
   if (t.gapMs !== undefined) GAP_MS = t.gapMs;
   if (t.basePauseMs !== undefined) BASE_PAUSE_MS = t.basePauseMs;
+  if (t.hostBurst !== undefined) HOST_BURST = t.hostBurst;
+  if (t.hostRefillMs !== undefined) HOST_REFILL_MS = t.hostRefillMs;
+  if (t.hostPauseMs !== undefined) HOST_PAUSE_MS = t.hostPauseMs;
   if (t.reset) {
+    buckets.clear();
+    hostPause.clear();
+    saveHostPause();
     strikes = 0;
     gapFactor = 1;
     limit = MAX_CONCURRENCY;
@@ -92,6 +106,74 @@ interface Shared {
 const inflight = new Map<string, Shared>();
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/* ---------- ต่อ host ---------- */
+
+/** host จริงของคำขอ — URL ที่ห่อด้วย proxy (/__proxy?url=… หรือ proxy ของผู้ใช้) ดึง URL ข้างในออกมา */
+export function hostOf(url: string): string {
+  const inner = /https?%3A%2F%2F[^&]+/i.exec(url);
+  try {
+    return new URL(inner ? decodeURIComponent(inner[0]) : url, 'http://local').host;
+  } catch {
+    return '';
+  }
+}
+
+const buckets = new Map<string, { tokens: number; at: number }>();
+const hostPause = new Map<string, number>();
+try {
+  const raw = localStorage.getItem(LS_HOST_KEY);
+  if (raw) for (const [h, v] of Object.entries(JSON.parse(raw) as Record<string, number>)) if (v > Date.now()) hostPause.set(h, v);
+} catch {
+  /* ไม่มี storage */
+}
+function saveHostPause(): void {
+  try {
+    const now = Date.now();
+    const o: Record<string, number> = {};
+    for (const [h, v] of hostPause) if (v > now) o[h] = v;
+    if (Object.keys(o).length) localStorage.setItem(LS_HOST_KEY, JSON.stringify(o));
+    else localStorage.removeItem(LS_HOST_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+function syncHostPause(): void {
+  try {
+    const raw = localStorage.getItem(LS_HOST_KEY);
+    if (raw) for (const [h, v] of Object.entries(JSON.parse(raw) as Record<string, number>)) if (v > (hostPause.get(h) ?? 0)) hostPause.set(h, v);
+  } catch {
+    /* ignore */
+  }
+}
+/** เวลาที่ host นี้ยังถูกพัก (ms) */
+export function hostPausedFor(host: string): number {
+  syncHostPause();
+  return Math.max(0, (hostPause.get(host) ?? 0) - Date.now());
+}
+function pauseHost(host: string, ms: number): void {
+  if (!host) return;
+  hostPause.set(host, Math.max(hostPause.get(host) ?? 0, Date.now() + ms));
+  saveHostPause();
+}
+/** รอจนถังของ host มีโทเคน (ยิงติดกันได้ HOST_BURST แล้วเติมทีละ 1 ทุก HOST_REFILL_MS) */
+async function hostSlot(host: string): Promise<void> {
+  if (!host) return;
+  for (;;) {
+    const now = Date.now();
+    const b = buckets.get(host) ?? { tokens: HOST_BURST, at: now };
+    b.tokens = Math.min(HOST_BURST, b.tokens + (now - b.at) / HOST_REFILL_MS);
+    b.at = now;
+    buckets.set(host, b);
+    if (b.tokens >= 1) {
+      b.tokens -= 1;
+      return;
+    }
+    await sleep(Math.ceil((1 - b.tokens) * HOST_REFILL_MS));
+  }
+}
+/** คำตอบ 429 ที่ไม่ได้ยิงจริง — host ยังถูกพักอยู่ (ไม่ต่ออายุบล็อก) */
+const pausedResponse = () => new Response('{"message":"paused"}', { status: 429, headers: { 'content-type': 'application/json' } });
 
 async function acquire(): Promise<void> {
   while (active >= limit) await new Promise<void>((r) => waiting.push(r));
@@ -133,12 +215,19 @@ function loosen(): void {
 }
 
 async function run(url: string, init?: RequestInit): Promise<Response> {
+  const host = hostOf(url);
+  if (hostPausedFor(host) > 0) return pausedResponse();
+  await hostSlot(host);
+  if (hostPausedFor(host) > 0) return pausedResponse();
   await acquire();
   try {
     try {
       const res = await fetch(url, init);
       if (res.status === 429) {
-        if (pausedFor() === 0) backoff(res.headers.get('retry-after'));
+        const ra = Number(res.headers.get('retry-after')) * 1000;
+        pauseHost(host, Math.max(HOST_PAUSE_MS, Number.isFinite(ra) ? ra : 0));
+        // บีบท่อรวม: เช็กเฉพาะเวลาพักรวม (pausedFor รวมเวลาพัก host ที่เพิ่งตั้งไปแล้ว)
+        if (pausedUntil <= Date.now()) backoff(res.headers.get('retry-after'));
       } else if (res.ok) loosen();
       return res;
     } catch (e) {
@@ -187,5 +276,9 @@ export function pausedFor(): number {
   } catch {
     /* ignore */
   }
-  return Math.max(0, pausedUntil - Date.now());
+  syncHostPause();
+  const now = Date.now();
+  let host = 0;
+  for (const v of hostPause.values()) host = Math.max(host, v - now);
+  return Math.max(0, pausedUntil - now, host);
 }

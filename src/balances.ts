@@ -208,7 +208,43 @@ export function rememberBalancePrices(rows: BalanceRow[]): void {
   }
 }
 
-const cache = new Map<string, Balances>();
+/* แคชยอด: หน่วยความจำ + localStorage 10 นาที (ผู้ใช้ 2026-10-03 — เปิดซ้ำ/รีเฟรชไม่ยิงใหม่ ลดโอกาสเกินโควตา); Reload balance ยิงใหม่เสมอ */
+const LS_BAL = 'xcap.scan.balances';
+const BAL_TTL = 10 * 60_000;
+const cache = {
+  mem: new Map<string, Balances>(),
+  get(k: string): Balances | undefined {
+    const m = this.mem.get(k);
+    if (m) return m;
+    try {
+      const all = JSON.parse(localStorage.getItem(LS_BAL) ?? '{}') as Record<string, Balances>;
+      const hit = all[k];
+      if (hit && Date.now() - hit.at < BAL_TTL && !hit.limited) {
+        this.mem.set(k, hit);
+        return hit;
+      }
+    } catch {
+      /* ไม่มี storage */
+    }
+    return undefined;
+  },
+  has(k: string): boolean {
+    return this.get(k) !== undefined;
+  },
+  set(k: string, b: Balances): void {
+    this.mem.set(k, b);
+    if (b.limited) return;
+    try {
+      const all = JSON.parse(localStorage.getItem(LS_BAL) ?? '{}') as Record<string, Balances>;
+      const now = Date.now();
+      for (const key of Object.keys(all)) if (now - all[key]!.at >= BAL_TTL) delete all[key];
+      all[k] = b;
+      localStorage.setItem(LS_BAL, JSON.stringify(all));
+    } catch {
+      /* เต็ม/ถูกบล็อก — ใช้หน่วยความจำอย่างเดียว */
+    }
+  },
+};
 
 export interface BalanceState {
   supported: boolean;

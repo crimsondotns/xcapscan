@@ -81,6 +81,7 @@ Do not declare work done while any of these is red.
 - Settings = "settings panel": แถวแหล่งข้อมูลไม่มีกรอบรอบการ์ด คั่นด้วย hairline: grip ลากจัดลำดับ (`reorderEndpoints`) · ไอคอนชนิด · ชื่อ + dropdown รูปแบบที่อยู่ · "Priority N · URL" · สวิตช์ shadcn `Switch` · ลบ
 
 ## Rate limit (2026-09-22)
+- ต่อ host (ผู้ใช้ 2026-10-03 "ไม่อยากโดน 429"): แหล่งฟรียิงติดกันได้ ~7 แล้วบล็อกทั้ง host ~9 นาที → ถังโทเคนต่อ host ติดกัน 4 แล้วเติม 1/3 วิ (เกินรอคิว ไม่ยิง); โดน 429 → พัก host นั้น 10 นาที จำใน localStorage (`xcap:limiter:hostPause`) ระหว่างพักคืน 429 โดยไม่ยิงจริง host อื่นใช้ได้ปกติ; ยอดคงเหลือแคช localStorage 10 นาที (`xcap.scan.balances`)
 - ทุก fetch ผ่าน `limitedFetch` (`src/limiter.ts`): พร้อมกัน ≤2, เว้น 300ms, โดน 429 → พักทั้งคิว + บีบท่อเหลือ 1 (Retry-After หรือ 30s×2ⁿ ≤300s) แล้วคืน 429 ให้ผู้เรียกทันที **ไม่ยิงซ้ำเอง** — UI นับถอยหลังจาก `pausedFor()` ให้ผู้ใช้กดต่อ (ผู้ใช้ 2026-10-01) — ห้ามเรียก fetch ตรง
 
 ## CORS / proxy (2026-09-22)

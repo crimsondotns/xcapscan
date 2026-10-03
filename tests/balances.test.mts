@@ -4,7 +4,7 @@ import { addDec, balanceSource, fetchBalances, fromRaw, matchBalance, parseChain
 import { setLimiterTiming } from '../src/limiter.ts';
 import type { Endpoint } from '../src/store.ts';
 
-setLimiterTiming({ gapMs: 1, basePauseMs: 10, reset: true });
+setLimiterTiming({ gapMs: 1, basePauseMs: 10, reset: true, hostRefillMs: 1 });
 
 const ep = (over: Partial<Endpoint>): Endpoint => ({ id: 'e', name: 'n', url: 'https://src.invalid/h?id={address}', family: 'erc20', enabled: true, ...over }) as Endpoint;
 const fake = (status: number, body: unknown) => ({ ok: status >= 200 && status < 300, status, headers: { get: () => null }, json: async () => body, text: async () => JSON.stringify(body), clone() { return this; } });
