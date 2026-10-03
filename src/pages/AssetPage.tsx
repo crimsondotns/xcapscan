@@ -2,7 +2,7 @@
  * หน้าโทเคนหนึ่งตัว — ประวัติเฉพาะโทเคนนั้น ดูได้ทั้งแบบทุกกระเป๋าและเฉพาะกระเป๋าที่เข้ามา
  * ข้อมูลมาจากธุรกรรมที่โหลดไว้แล้วเท่านั้น ไม่มีการยิงคำขอเพิ่มของหน้านี้เอง
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { TxRow } from '../feed';
 import type { ChainMap } from '../chains';
@@ -30,7 +30,7 @@ import { useStore } from '../store';
 /** หน้าโทเคนแบบทุกกระเป๋า — ไม่มีกระเป๋าให้ดูยอด (ตระกูล sol = ไม่ยิงคำขอ) */
 const NO_WALLET = { id: '', label: '', address: '', family: 'sol', enabled: true } as unknown as Wallet;
 
-export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, onRange, onBack, onBackWallet, onWallet, onScopeAll, selected, onSelect, loading }: { tokenKey: string; wallet: Wallet | null; all: Wallet[]; rows: TxRow[]; chains: ChainMap; group: GroupId; range: Range; onRange: (r: Range) => void; onBack: () => void; onBackWallet: () => void; onWallet: (id: string) => void; onScopeAll: () => void; selected: string | null; onSelect: (r: TxRow) => void; loading: boolean }) {
+export function AssetPage({ onEnsure, tokenKey, wallet, all, rows, chains, group, range, onRange, onBack, onBackWallet, onWallet, onScopeAll, selected, onSelect, loading }: { onEnsure: (w: Wallet) => void; tokenKey: string; wallet: Wallet | null; all: Wallet[]; rows: TxRow[]; chains: ChainMap; group: GroupId; range: Range; onRange: (r: Range) => void; onBack: () => void; onBackWallet: () => void; onWallet: (id: string) => void; onScopeAll: () => void; selected: string | null; onSelect: (r: TxRow) => void; loading: boolean }) {
   const { t } = useI18n();
   const copy = useCopy();
   const groupLabel = useGroupLabel(all, group);
@@ -51,6 +51,11 @@ export function AssetPage({ tokenKey, wallet, all, rows, chains, group, range, o
   const tokenChain = balHit?.chain ?? histHit?.chain ?? null;
   /* ประวัติของโทเคนนี้จากแหล่งโดยตรง (chain_id + token_id) — เร็วกว่าไล่ทั้งกระเป๋า; ไม่ได้ก็กรองจากที่โหลดไว้ */
   const th = useTokenHistory(wallet, settings.endpoints, tokenChain, byId ? tokenKey : null, settings.pageSize);
+  /* ขอประวัติทั้งกระเป๋าเฉพาะเมื่อแหล่งกรองรายโทเคนไม่ได้ (ต้องกรองในเครื่อง) — ปกติใช้ useTokenHistory อย่างเดียว */
+  const needWalletHistory = !!wallet && !th.supported && !(bal.loading || th.loading);
+  useEffect(() => {
+    if (needWalletHistory && wallet) onEnsure(wallet);
+  }, [needWalletHistory, wallet, onEnsure]);
   const local = useMemo(() => (byId ? rows.filter((r) => r.moves.some((m) => m.amount !== 0 && m.tokenId?.toLowerCase() === k)) : rowsOfToken(rows, symbol)), [rows, byId, k, symbol]);
   const list = useMemo(() => {
     if (!th.supported) return local;

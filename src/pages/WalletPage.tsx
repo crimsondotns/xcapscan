@@ -30,7 +30,7 @@ type BulkOpts = { count: number; seek: boolean };
 
 // 👇 เพิ่ม onFetchMeta เข้าไปใน props
 export function WalletPage({ 
-  wallet, all, rows, chains, group, range, onRange, onBack, onWallet, onToken, selected, onSelect, loading, hasMore, onMore, onReload, onFetchMeta, bulk 
+  wallet, all, rows, chains, group, range, onRange, onBack, onWallet, onToken, selected, onSelect, loading, hasMore, onMore, onReload, onFetchMeta, onEnsure, bulk 
 }: { 
   wallet: Wallet; 
   all: Wallet[]; 
@@ -49,6 +49,7 @@ export function WalletPage({
   onMore: (opts?: OlderOpts) => void;
   bulk?: BulkOpts; 
   onReload: () => void;
+  onEnsure: (w: Wallet) => void;
   onFetchMeta: (w: Wallet) => void; // 👈 Type ของฟังก์ชันที่ส่งมา
 })   {
   const { t } = useI18n();
@@ -65,13 +66,15 @@ export function WalletPage({
   const bal = useBalances(wallet, settings.endpoints, tab === 'tokens');
   const balTotal = bal.data?.rows.reduce((s, r) => s + (r.usd ?? 0), 0) ?? null;
 
-  // 👇👇👇 เพิ่ม useEffect นี้ 👇👇👇
+  /* ยิงเฉพาะของแท็บที่เปิด (ผู้ใช้ 2026-10-03): Tokens ที่มีแหล่งยอดคงเหลือ = balance อย่างเดียว;
+     Transactions หรือ Tokens แบบสรุปจากประวัติ (ไม่มีแหล่งยอด) = โหลดประวัติ (+ metadata สำหรับสรุป) */
+  const needHistory = tab === 'history' || !bal.supported;
   useEffect(() => {
-    if (wallet && tab === 'tokens') {
-      void onFetchMeta(wallet);
-    }
-  }, [wallet, tab, onFetchMeta]);
-  // 👆👆👆 เพิ่ม useEffect นี้ 👆👆👆
+    if (needHistory) onEnsure(wallet);
+  }, [wallet, needHistory, onEnsure]);
+  useEffect(() => {
+    if (tab === 'tokens' && !bal.supported) void onFetchMeta(wallet);
+  }, [wallet, tab, bal.supported, onFetchMeta]);
 
   return (
     <>

@@ -25,6 +25,7 @@ import { GroupDrawer, GroupMenubar } from './components/GroupNav';
 import { Finder } from './components/Finder';
 import { Dashboard } from './pages/Dashboard';
 import { WalletPage } from './pages/WalletPage';
+import type { Wallet } from './store';
 import { AssetPage } from './pages/AssetPage';
 import type { Range } from './components/FlowChart';
 
@@ -115,13 +116,13 @@ export function App() {
     reset();
   }, [epKey, reset]);
 
-  const selectWallet = useCallback(
-    (id: string | null) => {
-      setActiveWallet(id);
-      const w = id ? wallets.find((x) => x.id === id) : undefined;
-      if (w && hasEndpoint && endpointsFor(w, settings).length) void ensure(w);
+  /* เลือกกระเป๋าอย่างเดียว ไม่โหลด — หน้ากระเป๋า/หน้าโทเคนขอประวัติเองเฉพาะแท็บที่ต้องใช้ (ผู้ใช้ 2026-10-03) */
+  const selectWallet = useCallback((id: string | null) => setActiveWallet(id), []);
+  const ensureWallet = useCallback(
+    (w: Wallet) => {
+      if (hasEndpoint && endpointsFor(w, settings).length) void ensure(w);
     },
-    [wallets, hasEndpoint, settings, ensure],
+    [hasEndpoint, settings, ensure],
   );
   const openWallet = useCallback(
     (id: string | null) => {
@@ -261,7 +262,11 @@ export function App() {
                 range={range}
                 onRange={setRange}
                 onOpenWallet={openWallet}
-                onSwitch={selectWallet}
+                onSwitch={(id) => {
+                  selectWallet(id);
+                  const w = id ? wallets.find((x) => x.id === id) : undefined;
+                  if (w) ensureWallet(w);
+                }}
                 onRemove={forget}
                 onImport={() => openDialog('import')}
                 hasSource={(w) => endpointsFor(w, settings).length > 0}
@@ -277,6 +282,7 @@ export function App() {
             <div className="stack-lg">
               {errorList}
               <AssetPage
+                onEnsure={ensureWallet}
                 tokenKey={pageToken}
                 wallet={activeWalletObj}
                 all={wallets}
@@ -319,6 +325,7 @@ export function App() {
                 })()}
                 onReload={() => void loadMany([activeWalletObj], 'reset')}
                 onFetchMeta={fillMeta}
+                onEnsure={ensureWallet}
               />
             </div>
           ) : null}
