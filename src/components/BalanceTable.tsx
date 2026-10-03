@@ -128,11 +128,13 @@ export function BalanceTable({ bal, chains, onToken }: { bal: BalanceState; chai
                 return (
                   <TableRow
                     key={`${r.chain}:${r.tokenId}`}
-                    className="tx-row"
-                    tabIndex={0}
-                    onClick={() => onToken(r.tokenId)}
+                    /* ระหว่างยังโหลดยอดไม่ครบ แถวกดไม่ได้ (ผู้ใช้ 2026-10-03) — กันยิงประวัติโทเคนซ้อนกับคำขอยอดที่ค้างอยู่ */
+                    className={cn('tx-row', bal.loading && 'cursor-progress opacity-60')}
+                    tabIndex={bal.loading ? -1 : 0}
+                    aria-disabled={bal.loading || undefined}
+                    onClick={() => !bal.loading && onToken(r.tokenId)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (!bal.loading && (e.key === 'Enter' || e.key === ' ')) {
                         e.preventDefault();
                         onToken(r.tokenId);
                       }

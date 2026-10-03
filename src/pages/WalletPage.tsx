@@ -96,7 +96,8 @@ export function WalletPage({
           onChange={setTab}
           tabs={[
             { value: 'tokens', label: t('tab.tokens'), count: bal.supported ? (bal.data?.rows.length ?? 0) : tokens.length },
-            { value: 'history', label: t('tab.history'), count: rows.length },
+            /* Transactions กดได้หลัง Tokens โหลดยอดเสร็จ (ผู้ใช้ 2026-10-03) — ไม่ยิงสองชุดซ้อนกันจนเกินโควตาของแหล่ง */
+            { value: 'history', label: t('tab.history'), count: rows.length, disabled: tab === 'tokens' && bal.supported && bal.loading },
           ]}
         />
         {tab === 'tokens' ? bal.supported ? <BalanceTable bal={bal} chains={chains} onToken={onToken} /> : <TokenTable rows={ranged} chains={chains} onToken={onToken} loading={loading} /> : <TxTable rows={rows} wallets={all} chains={chains} wallet={wallet.id} onWallet={(id) => onWallet(id)} onToken={onToken} selected={selected} onSelect={onSelect} loading={loading} hasMore={hasMore} onMore={onMore} onReload={onReload} bulk={bulk} />}

@@ -7,6 +7,8 @@ export interface PageTab<V extends string> {
   value: V;
   label: string;
   count?: number;
+  /** กดไม่ได้ชั่วคราว (เช่น รอแท็บอื่นโหลดเสร็จ) */
+  disabled?: boolean;
 }
 
 export function PageTabs<V extends string>({ value, tabs, onChange, label }: { value: V; tabs: Array<PageTab<V>>; onChange: (v: V) => void; label?: string }) {
@@ -15,7 +17,7 @@ export function PageTabs<V extends string>({ value, tabs, onChange, label }: { v
     <Tabs value={value} onValueChange={(v) => onChange(v as V)}>
       <TabsList variant="line" aria-label={label ?? t('tab.list')}>
         {tabs.map((tab) => (
-          <TabsTrigger key={tab.value} value={tab.value}>
+          <TabsTrigger key={tab.value} value={tab.value} disabled={tab.disabled}>
             {tab.label}
             {tab.count !== undefined && (
               <Badge variant="secondary" className="tabular-nums">
