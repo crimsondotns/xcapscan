@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FeedError, applyTokenMeta, fetchPage, toTemplate, unknownTokens, type Cursor } from './feed';
 import { ensureTokenMeta } from './tokens';
+import { resumeNow } from './limiter';
 import type { TxRow } from './feed';
 import type { Endpoint, Wallet } from './store';
 
@@ -44,6 +45,7 @@ export interface TokenHistory {
   loading: boolean;
   hasMore: boolean;
   limited: boolean;
+  retry: () => void;
   more: () => void;
 }
 
@@ -118,5 +120,13 @@ export function useTokenHistory(wallet: Wallet | null, endpoints: Endpoint[], ch
     if (!done && next) void load(next);
   }, [done, next, load]);
 
-  return { supported, rows, loading, hasMore: supported && !done && !!next, limited, more };
+  /** ผู้ใช้กดลองใหม่หลังโดน 429 — เลิกพักคิวแล้วขอหน้าที่ค้างอยู่อีกครั้ง */
+  const retry = useCallback(() => {
+    resumeNow();
+    setLimited(false);
+    setDone(false);
+    void load(next);
+  }, [next, load]);
+
+  return { supported, rows, loading, hasMore: supported && !done && !!next, limited, more, retry };
 }

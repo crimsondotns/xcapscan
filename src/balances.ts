@@ -9,7 +9,7 @@
  * แคชยอด 10 นาที (หน่วยความจำ + localStorage); หลังจากนั้นกระเป๋า EVM รีเฟรชจำนวนผ่าน RPC สาธารณะ (rpc.ts) ไม่ยิงแหล่งเดิม
  */
 import { useCallback, useEffect, useState } from 'react';
-import { hostOf, hostPausedFor, limitedFetch } from './limiter';
+import { limitedFetch } from './limiter';
 import { requestUrl } from './proxy';
 import { ensureTokenMeta } from './tokens';
 import { rememberPrice } from './prices';
@@ -285,9 +285,7 @@ async function fetchChainsFromSource(ep: Endpoint, origin: string, address: stri
  * ไม่มี roster / Solana / ไม่ได้ตั้ง RPC → แหล่งเดิมทั้งหมด แล้วจด roster
  */
 export async function loadBalances(ep: Endpoint, origin: string, wallet: Pick<Wallet, 'address' | 'family'>, key: string, chains: ChainMap, onPartial?: (b: Balances) => void): Promise<Balances> {
-  /* แหล่งเดิมยังถูกพัก → ใช้รายชื่อโทเคนเก่าแม้หมดอายุ ดีกว่ายิงไปโดน 429 */
-  const paused = hostPausedFor(hostOf(origin)) > 0;
-  const base = wallet.family === 'erc20' ? roster.get(key, paused) : null;
+  const base = wallet.family === 'erc20' ? roster.get(key) : null;
   const rpcs = base ? await rpcList() : null;
   if (base && rpcs) {
     const got = await refreshViaRpc(base.rows, wallet.address, chains, rpcs, (rows) => onPartial?.({ rows, limited: false, at: Date.now() }));

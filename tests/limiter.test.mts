@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { backoff, hostOf, hostPausedFor, limitedFetch, pausedFor, setLimiterTiming } from '../src/limiter.ts';
+import { backoff, hostOf, limitedFetch, pausedFor, resumeNow, setLimiterTiming } from '../src/limiter.ts';
 
 setLimiterTiming({ gapMs: 1, basePauseMs: 10, hostRefillMs: 1 });
 
@@ -86,21 +86,16 @@ test('Retry-After ที่แหล่งส่งมา ถูกใช้ก�
   setLimiterTiming({ reset: true });
 });
 
-test('host ที่โดน 429 ถูกพัก: คำขอถัดไปคืน 429 ทันทีโดยไม่ยิงจริง (ไม่ต่ออายุบล็อก) ส่วน host อื่นยังใช้ได้', async () => {
-  setLimiterTiming({ reset: true, basePauseMs: 1, hostPauseMs: 60_000 });
+test('host ที่โดน 429 ไม่ถูกล็อก: resumeNow แล้วยิงจริงได้ทันที', async () => {
+  setLimiterTiming({ reset: true, basePauseMs: 60_000 });
   let calls = 0;
-  (globalThis as { fetch: unknown }).fetch = async (u: string) => {
-    calls++;
-    return fake(u.includes('banned.invalid') ? 429 : 200);
-  };
+  (globalThis as { fetch: unknown }).fetch = async () => (calls++ === 0 ? fake(429) : fake(200));
   assert.equal((await limitedFetch('https://banned.invalid/a')).status, 429);
-  assert.ok(hostPausedFor('banned.invalid') > 50_000, 'พักอย่างน้อยเท่าเวลาบล็อก');
-  const again = await limitedFetch('https://banned.invalid/b');
-  assert.equal(again.status, 429);
-  assert.equal(calls, 1, 'ระหว่างพักไม่ยิงออกไปเลย');
-  await new Promise((r) => setTimeout(r, 5));
-  assert.equal((await limitedFetch('https://ok.invalid/c')).status, 200, 'host อื่นไม่โดนลากไปด้วย');
-  setLimiterTiming({ reset: true, basePauseMs: 10, hostPauseMs: 10 * 60_000 });
+  resumeNow();
+  assert.equal(pausedFor(), 0);
+  assert.equal((await limitedFetch('https://banned.invalid/b')).status, 200);
+  assert.equal(calls, 2, 'ยิงจริงอีกครั้ง');
+  setLimiterTiming({ reset: true, basePauseMs: 10 });
 });
 
 test('ถังต่อ host: ยิงติดกันได้ตาม burst แล้วที่เหลือรอเติม ไม่ยิงเกินโควตา', async () => {

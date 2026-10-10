@@ -22,7 +22,7 @@ import { chainOf } from '../chains';
 import { priceOf } from '../prices';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertAction, AlertDescription } from '@/components/ui/alert';
 import { CopyIcon, GlobeIcon } from 'lucide-react';
 import { addDec, isTokenAddress, useBalances, walletTokenUrl } from '../balances';
 import { useTokenHistory } from '../tokenFeed';
@@ -146,6 +146,11 @@ export function AssetPage({ onEnsure, tokenKey, wallet, all, rows, chains, group
         {th.limited && (
           <Alert>
             <AlertDescription>{t('recent.rateLimited')}</AlertDescription>
+            <AlertAction>
+              <Button size="sm" variant="outline" onClick={th.retry}>
+                {t('common.retryNow')}
+              </Button>
+            </AlertAction>
           </Alert>
         )}
         <TxTable rows={list} wallets={all} chains={chains} wallet={wallet?.id ?? ''} onWallet={(id) => (id ? onWallet(id) : onScopeAll())} selected={selected} onSelect={onSelect} loading={th.supported ? th.loading : loading} hasMore={th.hasMore} onMore={th.supported ? th.more : undefined} />
