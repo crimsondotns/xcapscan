@@ -25,7 +25,7 @@ const PAGE_CACHE_TTL_MS = 5 * 60_000;
 const PAGE_CACHE_MAX = 200;
 import { FeedError, applyTokenMeta, fetchPage, unknownTokens, type Cursor, type Page, type TokenMeta, type TxRow } from './feed';
 import { ensureTokenMeta } from './tokens';
-import { pausedFor, backoff } from './limiter';
+import { backoff, limited, resumeNow } from './limiter';
 import type { Endpoint, Settings, Wallet } from './store';
 
 export interface WalletFeed {
@@ -148,8 +148,8 @@ export function useFeed(settings: Settings) {
         })
       );
 
-      // แหล่งไหนตอบ 429 → พักทั้งคิวคำขอ (limiter) ทันที ไม่ให้ใครยิงต่อจนครบเวลา — UI อ่านเวลาที่เหลือจาก pausedFor()
-      if (results.some((r) => r.error?.kind === 'http' && r.error.status === 429) && pausedFor() === 0) backoff(null);
+      // แหล่งไหนตอบ 429 → ตั้งธง limited() ให้การโหลดอัตโนมัติหยุด (ไม่พักคิว — ผู้ใช้ 2026-10-10)
+      if (results.some((r) => r.error?.kind === 'http' && r.error.status === 429)) backoff();
 
       setFeeds((s) => {
         const prev = s[w.id] ?? EMPTY;
@@ -206,30 +206,29 @@ export function useFeed(settings: Settings) {
       const todo = ws.filter((w) => !latest.current[w.id]?.loaded && endpointsFor(w, settings).length);
       if (!todo.length) return;
       cancelRef.current = false;
+      resumeNow(); // ผู้ใช้กดโหลดเอง = ลองใหม่
       setProgress({ done: 0, total: todo.length, running: true, stopped: null, retryIn: 0 });
       for (let i = 0; i < todo.length; i += BATCH) {
         if (cancelRef.current) {
           setProgress((p) => ({ ...p, running: false, stopped: 'cancel' }));
           return;
         }
-        // คิวถูกพักอยู่ (จากที่อื่นในเบราว์เซอร์นี้ prolong ไว้) → อัปเดตตัวเลขแล้วหยุดรอ
-        const wait0 = pausedFor();
-        if (wait0 > 0) {
-          setProgress((p) => ({ ...p, running: false, stopped: 'rate', retryIn: Math.ceil(wait0 / 1000) }));
+        // โดน 429 จากที่อื่นระหว่างทาง → หยุด ไม่ยิงต่อเอง
+        if (limited()) {
+          setProgress((p) => ({ ...p, running: false, stopped: 'rate', retryIn: 0 }));
           return;
         }
         const batch = todo.slice(i, i + BATCH);
         await Promise.all(batch.map((w) => load(w, 'reset')));
         setProgress((p) => ({ ...p, done: Math.min(todo.length, i + batch.length) }));
-        const limited = batch.some((w) => Object.values(latest.current[w.id]?.errors ?? {}).some((e) => e.kind === 'http' && e.status === 429));
-        if (limited) {
-          const ms = backoff(null); // ตั้ง pause + บีบท่อ + บันทึก localStorage
-          setProgress((p) => ({ ...p, running: false, stopped: 'rate', retryIn: Math.ceil(ms / 1000) }));
+        const hit = batch.some((w) => Object.values(latest.current[w.id]?.errors ?? {}).some((e) => e.kind === 'http' && e.status === 429));
+        if (hit) {
+          backoff();
+          setProgress((p) => ({ ...p, running: false, stopped: 'rate', retryIn: 0 }));
           return;
         }
         if (i + BATCH < todo.length) {
-          // คิวถูกพักอยู่ (เพิ่งเจอ 429 ระหว่างทาง) → รอให้ครบก่อนค่อยส่งชุดถัดไป
-          await new Promise((r) => setTimeout(r, Math.max(BATCH_GAP_MS, pausedFor())));
+          await new Promise((r) => setTimeout(r, BATCH_GAP_MS));
         }
       }
       setProgress((p) => ({ ...p, running: false }));

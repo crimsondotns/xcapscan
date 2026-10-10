@@ -4,7 +4,7 @@ import { addDec, balanceSource, fetchBalances, fromRaw, matchBalance, parseChain
 import { setLimiterTiming } from '../src/limiter.ts';
 import type { Endpoint } from '../src/store.ts';
 
-setLimiterTiming({ gapMs: 1, basePauseMs: 10, reset: true, hostRefillMs: 1 });
+setLimiterTiming({ gapMs: 1, reset: true, hostRefillMs: 1 });
 
 const ep = (over: Partial<Endpoint>): Endpoint => ({ id: 'e', name: 'n', url: 'https://src.invalid/h?id={address}', family: 'erc20', enabled: true, ...over }) as Endpoint;
 const fake = (status: number, body: unknown) => ({ ok: status >= 200 && status < 300, status, headers: { get: () => null }, json: async () => body, text: async () => JSON.stringify(body), clone() { return this; } });
@@ -40,7 +40,7 @@ test('source: first enabled endpoint of the wallet family', () => {
 });
 
 test('429 mid-way: stops, returns what it has, flags limited', async () => {
-  setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
+  setLimiterTiming({ reset: true, gapMs: 1 });
   const seen: string[] = [];
   let hit429 = false;
   let afterHit = 0;
@@ -58,7 +58,7 @@ test('429 mid-way: stops, returns what it has, flags limited', async () => {
   // คำขอที่อีกงานส่งเข้าคิวไว้ก่อนเห็น 429 อาจออกหลังคิวพักครบ ได้มากสุด 1 (= PARALLEL − 1) ไม่มีคำขอใหม่เกินนั้น
   assert.ok(afterHit <= 1, 'at most the one request already queued');
   assert.ok(seen.filter((u) => u.includes('token_list')).length < 4, 'remaining chains skipped');
-  setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
+  setLimiterTiming({ reset: true, gapMs: 1 });
 });
 
 test('filter: symbol/name contains, token address prefix, chain', () => {
@@ -97,7 +97,7 @@ test('price cache: an old trade does not overwrite the current SOL price; balanc
   const { fetchPage } = await import('../src/feed.ts');
   const { priceOf } = await import('../src/prices.ts');
   const { rememberBalancePrices } = await import('../src/balances.ts');
-  setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
+  setLimiterTiming({ reset: true, gapMs: 1 });
   const trade = { userTrades: [{ type: 'buy', assetId: 'J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr', usdVolume: 540.475, nativeVolume: 6.5, amount: 1000, price: 0.54, blockTime: '2026-01-17T09:30:45.000Z', txHash: 'h1' }] };
   (globalThis as { fetch: unknown }).fetch = async () => fake(200, trade);
   // trade loaded first, then the balance → the balance (now) wins
@@ -124,7 +124,7 @@ test('exact decimals: raw ÷ 10^decimals, string sums, source text kept, grouped
 });
 
 test('balances: token_list per chain runs 2 at a time (not one by one), partial results reported', async () => {
-  setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 10 });
+  setLimiterTiming({ reset: true, gapMs: 1 });
   let live = 0;
   let peak = 0;
   (globalThis as { fetch: unknown }).fetch = async (u: string) => {

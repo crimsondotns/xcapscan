@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { backoff, hostOf, limitedFetch, pausedFor, resumeNow, setLimiterTiming } from '../src/limiter.ts';
+import { hostOf, limited, limitedFetch, resumeNow, setLimiterTiming } from '../src/limiter.ts';
 
-setLimiterTiming({ gapMs: 1, basePauseMs: 10, hostRefillMs: 1 });
+setLimiterTiming({ gapMs: 1, hostRefillMs: 1 });
 
 /** Response ปลอมแบบย่อ — ต้องมี clone() เพราะคิวแจกผลให้ผู้เรียกหลายคน */
 const fake = (status: number, retryAfter: string | null = null) => {
@@ -16,15 +16,17 @@ const fake = (status: number, retryAfter: string | null = null) => {
   return res;
 };
 
-test('429 is returned at once (no auto-retry) and pauses the whole queue', async () => {
-  setLimiterTiming({ reset: true, basePauseMs: 50 });
+test('429 is returned at once (no auto-retry) and raises limited() without pausing', async () => {
+  setLimiterTiming({ reset: true });
   let calls = 0;
   (globalThis as { fetch: unknown }).fetch = async () => fake(++calls < 3 ? 429 : 200);
   const res = await limitedFetch('https://x.invalid/a');
   assert.equal(res.status, 429);
   assert.equal(calls, 1, 'ไม่ยิงซ้ำเอง');
-  assert.ok(pausedFor() > 0, 'คิวถูกพัก');
-  setLimiterTiming({ reset: true, basePauseMs: 10 });
+  assert.ok(limited(), 'ตั้งธง');
+  assert.equal((await limitedFetch('https://x.invalid/b')).status, 429, 'ไม่พัก — ยิงจริงต่อได้');
+  assert.equal(calls, 2);
+  setLimiterTiming({ reset: true });
 });
 
 test('concurrency is capped at 2', async () => {
@@ -59,7 +61,7 @@ test('คำขอ URL เดียวกันที่ค้างอยู่
 });
 
 test('โดน 429 แล้วบีบท่อ: เหลือทีละ 1 คำขอ และถ่างระยะห่าง', async () => {
-  setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 2 });
+  setLimiterTiming({ reset: true, gapMs: 1 });
   (globalThis as { fetch: unknown }).fetch = async () => fake(429);
   const res = await limitedFetch('https://x.invalid/blocked');
   assert.equal(res.status, 429, 'คืน 429 ให้ผู้เรียกตัดสินใจ');
@@ -78,24 +80,16 @@ test('โดน 429 แล้วบีบท่อ: เหลือทีละ 
   assert.equal(peak, 1, 'หลังโดนแบน ยิงทีละคำขอเท่านั้น');
 });
 
-test('Retry-After ที่แหล่งส่งมา ถูกใช้กำหนดเวลาพัก (ไม่ใช่ค่าตั้งต้นของเราเอง)', () => {
-  setLimiterTiming({ reset: true, gapMs: 1, basePauseMs: 5 });
-  const ms = backoff('2');
-  assert.equal(ms, 2000);
-  assert.ok(pausedFor() > 1500, `คิวต้องถูกพักไว้จริง แต่ได้ ${pausedFor()}ms`);
-  setLimiterTiming({ reset: true });
-});
-
 test('host ที่โดน 429 ไม่ถูกล็อก: resumeNow แล้วยิงจริงได้ทันที', async () => {
-  setLimiterTiming({ reset: true, basePauseMs: 60_000 });
+  setLimiterTiming({ reset: true });
   let calls = 0;
   (globalThis as { fetch: unknown }).fetch = async () => (calls++ === 0 ? fake(429) : fake(200));
   assert.equal((await limitedFetch('https://banned.invalid/a')).status, 429);
   resumeNow();
-  assert.equal(pausedFor(), 0);
+  assert.equal(limited(), false);
   assert.equal((await limitedFetch('https://banned.invalid/b')).status, 200);
   assert.equal(calls, 2, 'ยิงจริงอีกครั้ง');
-  setLimiterTiming({ reset: true, basePauseMs: 10 });
+  setLimiterTiming({ reset: true });
 });
 
 test('ถังต่อ host: ยิงติดกันได้ตาม burst แล้วที่เหลือรอเติม ไม่ยิงเกินโควตา', async () => {

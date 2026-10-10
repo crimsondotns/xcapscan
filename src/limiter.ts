@@ -4,12 +4,11 @@ import { fallbackProxy } from './proxy';
  *
  * - ยิงพร้อมกันไม่เกิน 2 คำขอ เว้นอย่างน้อย 500ms ระหว่างคำขอ
  * - คำขอ URL เดียวกันที่ค้างอยู่ ใช้ผลร่วมกัน (กดโหลดซ้ำ/หลายจอถามพร้อมกัน จะไม่กลายเป็นหลายคำขอ)
- * - โดน 429 → หยุด "ทั้งคิว" (ตาม Retry-After ถ้ามี ไม่มีก็ 5s แล้วเพิ่มเป็น 2 เท่า สูงสุด 60s)
+ * - โดน 429 → ไม่พักคิว (ผู้ใช้ 2026-10-10) แค่ตั้งธง limited() ให้ฟีเจอร์ที่โหลดเองหยุด ไม่ fetch อัตโนมัติต่อ
  *   พร้อม "บีบท่อ" ลงเหลือ 1 คำขอต่อครั้งและถ่างระยะห่างขึ้น แล้วค่อยๆ คลายเมื่อสำเร็จติดกันหลายครั้ง
  *   (แหล่งข้อมูลส่วนใหญ่ไม่ได้ดูแค่จำนวนคำขอ แต่ดูความถี่ด้วย ยิงถี่ตอนเพิ่งโดนแบนคือต่ออายุแบนให้ตัวเอง)
  * - ไม่ยิงซ้ำเอง (ผู้ใช้ 2026-10-01): คืน 429 ให้ผู้เรียกทันที — ยิงซ้ำตอนโดนแบนคือต่ออายุแบน;
- *   UI โชว์เวลานับถอยหลังจาก pausedFor() แล้วให้ผู้ใช้กดโหลดต่อเอง
- * - ซิงก์เวลาพักข้ามแท็บผ่าน localStorage — เปิดแท็บใหม่ระหว่างที่แท็บอื่นพักอยู่ จะไม่ยิงซ้ำ
+ *   ผู้ใช้กดโหลดต่อเอง → resumeNow() ล้างธง
  * - ต่อ host (ผู้ใช้ 2026-10-03 "ไม่อยากโดน 429 เลย"): แหล่งฟรียอมให้ยิงติดกันราว 7 คำขอแล้วบล็อกทั้ง host ~9 นาที
  *   → ถังโทเคนต่อ host: ติดกันได้ HOST_BURST คำขอ แล้วเติม 1 ทุก HOST_REFILL_MS (คำขอที่เกินรอคิว ไม่ยิงออกไป)
  * - ไม่ล็อก host หลังโดน 429 (ผู้ใช้ 2026-10-10: เปลี่ยน IP ก็ปลดบล็อกแล้ว) — ผู้ใช้กด "ลองใหม่" → resumeNow() ล้างเวลาพักของคิว
@@ -18,19 +17,14 @@ const MAX_CONCURRENCY = 2;
 /** สำเร็จติดกันกี่ครั้งถึงคลายท่อขึ้นหนึ่งขั้น */
 const RECOVER_AFTER = 6;
 let GAP_MS = 500;
-let BASE_PAUSE_MS = 30000;
-const MAX_PAUSE_MS = 300000;
 const MAX_GAP_FACTOR = 8;
 let HOST_BURST = 4;
 let HOST_REFILL_MS = 3000;
 
-/** คีย์ใน localStorage สำหรับซิงก์เวลาพักข้ามแท็บ (ทุกแท็บในเบราว์เซอร์เดียวกันใช้เน็ตเดียวกัน) */
-const LS_PAUSE_KEY = 'xcap:limiter:pausedUntil';
-
 let active = 0;
 let lastStart = 0;
-let pausedUntil = 0;
-let strikes = 0;
+/** โดน 429 และผู้ใช้ยังไม่กดลองใหม่ — ฟีเจอร์ที่โหลดเองต้องหยุด */
+let limitedFlag = false;
 /** จำนวนที่ยอมให้ยิงพร้อมกันตอนนี้ (บีบลงเมื่อโดน 429) */
 let limit = MAX_CONCURRENCY;
 /** ตัวคูณระยะห่างระหว่างคำขอตอนนี้ */
@@ -38,53 +32,17 @@ let gapFactor = 1;
 let goodRun = 0;
 const waiting: Array<() => void> = [];
 
-/* โหลดค่าที่ค้างไว้จาก localStorage (เช่น เปิดแท็บใหม่ระหว่างที่แท็บอื่นพักอยู่) */
-try {
-  const saved = localStorage.getItem(LS_PAUSE_KEY);
-  if (saved) pausedUntil = Number(saved) || 0;
-} catch {
-  /* localStorage ใช้ไม่ได้ (โหมดส่วนตัว) → เก็บในหน่วยความจำอย่างเดียว */
-}
-
-/* แท็บอื่น prolong เวลา → รับรู้ทันที ไม่ต้องรอจังหวะ pausedFor() */
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (e) => {
-    if (e.key !== LS_PAUSE_KEY || !e.newValue) return;
-    const v = Number(e.newValue) || 0;
-    if (v > pausedUntil) pausedUntil = v;
-  });
-}
-
-function persistPausedUntil(): void {
-  try {
-    localStorage.setItem(LS_PAUSE_KEY, String(pausedUntil));
-  } catch {
-    /* ignore */
-  }
-}
-
-function clearPausedUntil(): void {
-  pausedUntil = 0;
-  try {
-    localStorage.removeItem(LS_PAUSE_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
 /** เทสต์เท่านั้น: ย่นเวลารอ และคืนค่าสภาพท่อให้เริ่มใหม่สะอาดๆ */
-export function setLimiterTiming(t: { gapMs?: number; basePauseMs?: number; reset?: boolean; hostBurst?: number; hostRefillMs?: number }): void {
+export function setLimiterTiming(t: { gapMs?: number; reset?: boolean; hostBurst?: number; hostRefillMs?: number }): void {
   if (t.gapMs !== undefined) GAP_MS = t.gapMs;
-  if (t.basePauseMs !== undefined) BASE_PAUSE_MS = t.basePauseMs;
   if (t.hostBurst !== undefined) HOST_BURST = t.hostBurst;
   if (t.hostRefillMs !== undefined) HOST_REFILL_MS = t.hostRefillMs;
   if (t.reset) {
     buckets.clear();
-    strikes = 0;
     gapFactor = 1;
     limit = MAX_CONCURRENCY;
     goodRun = 0;
-    clearPausedUntil();
+    limitedFlag = false;
   }
 }
 
@@ -117,6 +75,7 @@ const buckets = new Map<string, { tokens: number; at: number }>();
 /* เวลาพักต่อ host เดิม (ถูกเอาออก) — ล้างค่าที่ค้างในเครื่องผู้ใช้ */
 try {
   localStorage.removeItem('xcap:limiter:hostPause');
+  localStorage.removeItem('xcap:limiter:pausedUntil');
 } catch {
   /* ไม่มี storage */
 }
@@ -142,7 +101,7 @@ async function acquire(): Promise<void> {
   active++;
   for (;;) {
     const now = Date.now();
-    const wait = Math.max(pausedUntil - now, lastStart + GAP_MS * gapFactor - now);
+    const wait = lastStart + GAP_MS * gapFactor - now;
     if (wait <= 0) break;
     await sleep(wait);
   }
@@ -154,22 +113,16 @@ function release(): void {
   waiting.shift()?.();
 }
 
-/** แหล่งบอกให้รอ (429) — หยุดคิวทั้งหมด แล้วบีบท่อให้แคบลง + ซิงก์ข้ามแท็บ */
-export function backoff(retryAfterHeader: string | null): number {
-  const hinted = retryAfterHeader ? Number(retryAfterHeader) * 1000 : NaN;
-  const ms = Number.isFinite(hinted) && hinted > 0 ? Math.min(hinted, MAX_PAUSE_MS) : Math.min(BASE_PAUSE_MS * 2 ** strikes, MAX_PAUSE_MS);
-  strikes = Math.min(strikes + 1, 4);
-  pausedUntil = Math.max(pausedUntil, Date.now() + ms);
-  persistPausedUntil();
+/** โดน 429 — ตั้งธง limited() แล้วบีบท่อให้แคบลง (ไม่พักคิว) */
+export function backoff(): void {
+  limitedFlag = true;
   limit = 1;
   gapFactor = Math.min(gapFactor * 2, MAX_GAP_FACTOR);
   goodRun = 0;
-  return ms;
 }
 
 /** สำเร็จติดกันพอสมควร → คลายท่อขึ้นทีละขั้น (ไม่กระโดดกลับไปเต็มที่ทันที) */
 function loosen(): void {
-  strikes = Math.max(0, strikes - 1);
   if (++goodRun < RECOVER_AFTER) return;
   goodRun = 0;
   if (gapFactor > 1) gapFactor = Math.max(1, gapFactor / 2);
@@ -184,7 +137,7 @@ async function run(url: string, init?: RequestInit): Promise<Response> {
     try {
       const res = await fetch(url, init);
       if (res.status === 429) {
-        if (pausedUntil <= Date.now()) backoff(res.headers.get('retry-after'));
+        backoff();
       } else if (res.ok) loosen();
       return res;
     } catch (e) {
@@ -222,22 +175,13 @@ export async function limitedFetch(url: string, init?: RequestInit): Promise<Res
   }
 }
 
-/** ให้เทสต์/ฟีเจอร์อื่นดูว่าตอนนี้ถูกพักอยู่ไหม — อ่านจาก localStorage ด้วย แท็บอื่น prolong ได้ */
-export function pausedFor(): number {
-  try {
-    const saved = localStorage.getItem(LS_PAUSE_KEY);
-    if (saved) {
-      const v = Number(saved) || 0;
-      if (v > pausedUntil) pausedUntil = v;
-    }
-  } catch {
-    /* ignore */
-  }
-  return Math.max(0, pausedUntil - Date.now());
+/** โดน 429 แล้วยังไม่มีใครกดลองใหม่ — ฟีเจอร์ที่ fetch อัตโนมัติต้องหยุด */
+export function limited(): boolean {
+  return limitedFlag;
 }
 
-/** ผู้ใช้กดลองใหม่ (เช่น เพิ่งเปลี่ยน IP) — เลิกพักคิวทันที ท่อยังแคบอยู่แล้วค่อยคลายเอง */
+/** ผู้ใช้กดลองใหม่ (เช่น เพิ่งเปลี่ยน IP) — ล้างธง ท่อยังแคบอยู่แล้วค่อยคลายเอง */
 export function resumeNow(): void {
-  clearPausedUntil();
+  limitedFlag = false;
   buckets.clear();
 }

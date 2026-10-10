@@ -24,7 +24,7 @@ import { HeadFilter } from './HeadFilter';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Spinner } from '@/components/ui/spinner';
 import type { OlderOpts } from '../useFeed';
-import { pausedFor } from '../limiter';
+import { limited, resumeNow } from '../limiter';
 
 const TYPES: TxType[] = ['swap', 'send', 'receive', 'approve', 'contract'];
 /** ตัวกรองชนิด: 'transfer' = โอน นับทั้งส่งและรับในอันเดียว ('' = ทุกประเภท) */
@@ -161,15 +161,14 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
   const lastRows = useRef(-1);
   useEffect(() => {
     if (!fetching || loading || lastRows.current === rows.length) return;
-    const wait = pausedFor();
-    if (wait > 0) {
-      setAuto({ ...run, rate: Math.ceil(wait / 1000) });
+    if (limited()) {
+      setAuto({ ...run, rate: 1 });
       return;
     }
     const first = run.pages === 0;
     const t = setTimeout(
       () => {
-        if (pausedFor() > 0) return setAuto({ ...run, rate: Math.ceil(pausedFor() / 1000) });
+        if (limited()) return setAuto({ ...run, rate: 1 });
         lastRows.current = rows.length;
         setAuto({ ...run, pages: run.pages + 1 });
         // หน้าแรกของรอบ: กระโดดไปวันสิ้นสุดของช่วงถ้าแหล่งรองรับ และยังไม่ได้โหลดลงไปถึงตรงนั้น
@@ -181,16 +180,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetching, loading, rows.length]);
   const capped = want && run.pages >= MAX_PAGES;
-  /* คิวคำขอพักอยู่ (429) ระหว่างไล่ → นับถอยหลังให้เห็น แทน "กำลังโหลด" ค้าง */
-  const [pauseLeft, setPauseLeft] = useState(0);
-  useEffect(() => {
-    if (!fetching && !run.rate) return setPauseLeft(0);
-    const tick = () => setPauseLeft(Math.ceil(pausedFor() / 1000));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [fetching, run.rate]);
-  const rateLimited = fromTs !== null && !covered && (run.rate > 0 || (fetching && pauseLeft > 0));
+  const rateLimited = fromTs !== null && !covered && run.rate > 0;
   const fromLabel = fromTs === null ? '' : new Date(fromTs * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
   const inf = useInfinite({ total: filtered.length, page: PAGE, hasMore: hasMore && !covered, loading, fetchMore: onMore, resetKey: `${wallet}|${q}|${chain}|${type}|${JSON.stringify(conds)}|${sort.key}${sort.dir}|${JSON.stringify(adv)}` });
@@ -316,11 +306,12 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
             </>
           ) : rateLimited ? (
             <>
-              {pauseLeft > 0 ? t('af.rate', { n: pauseLeft }) : t('af.rateReady')}
+              {t('af.rateReady')}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  resumeNow();
                   lastRows.current = -1;
                   setAuto({ ...run, pages: 0, rate: 0 });
                 }}
@@ -335,6 +326,7 @@ export function TxTable({ rows, wallets, chains: chainInfo, wallet, onWallet, on
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  resumeNow();
                   lastRows.current = -1;
                   setAuto({ ...run, pages: 0, rate: 0 });
                 }}

@@ -4,7 +4,7 @@ import { balanceOfCall, decodeAggregate3, encodeAggregate3, MULTICALL3, nativeCa
 import { refreshViaRpc, type BalanceRow } from '../src/balances.ts';
 import { setLimiterTiming } from '../src/limiter.ts';
 
-setLimiterTiming({ gapMs: 1, basePauseMs: 10, reset: true, hostRefillMs: 1 });
+setLimiterTiming({ gapMs: 1, reset: true, hostRefillMs: 1 });
 
 const W = '0x00000000000000000000000000000000000000aa';
 const T = '0x00000000000000000000000000000000000000bb';

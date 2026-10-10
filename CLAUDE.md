@@ -81,8 +81,8 @@ Do not declare work done while any of these is red.
 - Settings = "settings panel": แถวแหล่งข้อมูลไม่มีกรอบรอบการ์ด คั่นด้วย hairline: grip ลากจัดลำดับ (`reorderEndpoints`) · ไอคอนชนิด · ชื่อ + dropdown รูปแบบที่อยู่ · "Priority N · URL" · สวิตช์ shadcn `Switch` · ลบ
 
 ## Rate limit (2026-09-22)
-- ต่อ host (ผู้ใช้ 2026-10-03 "ไม่อยากโดน 429"): ถังโทเคนต่อ host ติดกัน 4 แล้วเติม 1/3 วิ (เกินรอคิว ไม่ยิง); **ไม่ล็อก host หลังโดน 429** (ผู้ใช้ 2026-10-10: เปลี่ยน IP ก็ปลดบล็อก) — Alert มีปุ่ม "Try again now" → `resumeNow()` ล้างเวลาพักคิวแล้วยิงใหม่; ยอดคงเหลือแคช localStorage 10 นาที (`xcap.scan.balances`)
-- ทุก fetch ผ่าน `limitedFetch` (`src/limiter.ts`): พร้อมกัน ≤2, เว้น 300ms, โดน 429 → พักทั้งคิว + บีบท่อเหลือ 1 (Retry-After หรือ 30s×2ⁿ ≤300s) แล้วคืน 429 ให้ผู้เรียกทันที **ไม่ยิงซ้ำเอง** — UI นับถอยหลังจาก `pausedFor()` ให้ผู้ใช้กดต่อ (ผู้ใช้ 2026-10-01) — ห้ามเรียก fetch ตรง
+- ต่อ host (ผู้ใช้ 2026-10-03 "ไม่อยากโดน 429"): ถังโทเคนต่อ host ติดกัน 4 แล้วเติม 1/3 วิ (เกินรอคิว ไม่ยิง); **ไม่ล็อก host หลังโดน 429** (ผู้ใช้ 2026-10-10: เปลี่ยน IP ก็ปลดบล็อก) — Alert หน้าโทเคนมีปุ่ม "Try again now" → `resumeNow()` แล้วยิงใหม่; ยอดคงเหลือแคช localStorage 10 นาที (`xcap.scan.balances`)
+- ทุก fetch ผ่าน `limitedFetch` (`src/limiter.ts`): พร้อมกัน ≤2, เว้น 300ms, โดน 429 → **ไม่พักคิว** (ผู้ใช้ 2026-10-10) แค่บีบท่อเหลือ 1 + ตั้งธง `limited()` แล้วคืน 429 ทันที **ไม่ยิงซ้ำเอง**; การโหลดอัตโนมัติ (loadStaggered, ไล่หน้าตามช่วงวันที่ใน TxTable) หยุดเมื่อธงตั้ง ผู้ใช้กดโหลดต่อ/ลองใหม่ → `resumeNow()` ล้างธง — ห้ามเรียก fetch ตรง
 
 ## ยอดคงเหลือผ่าน RPC (ผู้ใช้ 2026-10-03)
 - `src/rpc.ts`: รายการ RPC สาธารณะจาก URL ตอน build (`VITE_RPC_LIST_URL` / secret `RPC_LIST_URL`, รูปแบบ `[{ chainId, rpc: [url|{url}] }]`, แคช 24 ชม. `xcap.scan.rpcs`, เก็บ ≤3 ตัว/เชน https ไม่มีตัวแปรกุญแจ) — ห้ามฝัง host
